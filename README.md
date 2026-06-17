@@ -61,6 +61,12 @@ Browser
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail.
 
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Production Checklist](docs/PRODUCTION_CHECKLIST.md)
+- [Technical Documentation](docs/TECHNICAL_DOCUMENTATION.md)
+
 ## Voice Input
 
 Hazlo uses the browser `SpeechRecognition` API where available. While recording, interim and final transcript segments are shown in the UI. When recording stops, Hazlo saves the final transcript as an entry, extracts tasks, persists the entry locally, and starts Notion sync.
