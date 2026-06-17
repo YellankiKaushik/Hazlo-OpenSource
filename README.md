@@ -6,6 +6,9 @@
 [![Vercel](https://img.shields.io/badge/Vercel-ready-000?logo=vercel&logoColor=fff)](https://vercel.com/)
 [![Notion API](https://img.shields.io/badge/Notion-API-000?logo=notion&logoColor=fff)](https://developers.notion.com/)
 
+**Live Demo:** [https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app/)
+**GitHub Repo:** [https://github.com/YellankiKaushik/Hazlo-OpenSource](https://github.com/YellankiKaushik/Hazlo-OpenSource)
+
 Hazlo is a voice-first task capture app for turning spoken thoughts into organized tasks. It is built for moments when opening a full task manager is too much friction: speak once, keep the raw thought, extract tasks locally, and sync the result to Notion.
 
 ## What It Solves
