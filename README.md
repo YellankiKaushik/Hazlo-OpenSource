@@ -124,14 +124,12 @@ NOTION_TOKEN=your_notion_token_here
 NOTION_DATABASE_ID=your_notion_database_id_here
 API_SECRET=your_random_api_secret_here
 VITE_API_SECRET=your_same_random_api_secret_here
-VITE_API_BASE_URL=
 ```
 
 Notes:
 
 - `NOTION_TOKEN`, `NOTION_DATABASE_ID`, and `API_SECRET` are server-side Vercel variables.
 - `VITE_API_SECRET` is compiled into the frontend and must match `API_SECRET`.
-- `VITE_API_BASE_URL` is optional. Leave it empty when frontend and API share the same origin.
 
 ## Local Development
 
