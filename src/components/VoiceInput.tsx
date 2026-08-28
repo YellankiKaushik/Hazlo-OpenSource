@@ -1,335 +1,292 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Keyboard, Languages, Loader2, Mic, MicOff, Square, X } from 'lucide-react';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useHazloStore } from '../store/useStore';
 
-interface SpeechRecognitionEvent extends Event {
-    results: SpeechRecognitionResultList;
-    resultIndex: number;
-}
-
-interface SpeechRecognitionResultList {
-    length: number;
-    item(index: number): SpeechRecognitionResult;
-    [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-    length: number;
-    item(index: number): SpeechRecognitionAlternative;
-    [index: number]: SpeechRecognitionAlternative;
-    isFinal: boolean;
-}
-
-interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-    error: string;
-    message: string;
-}
-
-interface ISpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    start(): void;
-    stop(): void;
-    abort(): void;
-    onresult: ((event: SpeechRecognitionEvent) => void) | null;
-    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-    onend: (() => void) | null;
-    onstart: (() => void) | null;
-}
-
-declare global {
-    interface Window {
-        SpeechRecognition: new () => ISpeechRecognition;
-        webkitSpeechRecognition: new () => ISpeechRecognition;
-    }
+function formatElapsed(seconds: number): string {
+    const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${remainingSeconds}`;
 }
 
 export function VoiceInput() {
-    const recognitionRef = useRef<ISpeechRecognition | null>(null);
-    const [isSpeechSupported, setIsSpeechSupported] = useState<boolean | null>(null);
-
-    const isRecordingRef = useRef(false);
-    const previousSessionsFinalTextRef = useRef('');
-
-    const isRecording = useHazloStore(state => state.isRecording);
-    const isProcessing = useHazloStore(state => state.isProcessing);
-    const currentTranscript = useHazloStore(state => state.currentTranscript);
-    const error = useHazloStore(state => state.error);
+    const addEntry = useHazloStore(state => state.addEntry);
     const setRecording = useHazloStore(state => state.setRecording);
+    const setProcessing = useHazloStore(state => state.setProcessing);
     const setTranscript = useHazloStore(state => state.setTranscript);
     const setError = useHazloStore(state => state.setError);
-    const addEntry = useHazloStore(state => state.addEntry);
     const clearTranscript = useHazloStore(state => state.clearTranscript);
-    const unsupportedVoiceMessage = 'Voice input is not supported in this browser.';
+    const [isTextEntryOpen, setIsTextEntryOpen] = useState(false);
+    const [manualText, setManualText] = useState('');
+    const [manualError, setManualError] = useState<string | null>(null);
 
-    useEffect(() => {
-        isRecordingRef.current = isRecording;
-    }, [isRecording]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') {
-            setIsSpeechSupported(false);
-            return;
-        }
-
-        setIsSpeechSupported(Boolean(window.SpeechRecognition || window.webkitSpeechRecognition));
-    }, []);
-
-    const createRecognition = useCallback((): ISpeechRecognition | null => {
-        if (typeof window === 'undefined') return null;
-        const SpeechRecognition =
-            window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return null;
-
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-        return recognition;
-    }, []);
-
-    const handleResult = useCallback(
-        (event: SpeechRecognitionEvent) => {
-            console.log('[Hazlo/Speech] onresult event received. results count:', event.results.length);
-            let finalTranscript = '';
-            let interimTranscript = '';
-
-            for (let i = 0; i < event.results.length; i++) {
-                const result = event.results[i];
-                const text = typeof result[0]?.transcript === 'string' ? result[0].transcript : '';
-
-                if (result.isFinal) {
-                    finalTranscript += text + ' ';
-                } else {
-                    interimTranscript += text;
-                }
-            }
-
-            const accumulated = previousSessionsFinalTextRef.current + finalTranscript + interimTranscript;
-            const display = accumulated.trim();
-            console.log('[Hazlo/Speech] Live reconstructed transcript:', {
-                base: previousSessionsFinalTextRef.current,
-                final: finalTranscript,
-                interim: interimTranscript,
-                display,
-            });
-
-            setTranscript(display);
-        },
-        [setTranscript]
-    );
-
-    const handleError = useCallback(
-        (event: SpeechRecognitionErrorEvent) => {
-            console.warn('[Hazlo/Speech] Speech recognition error event:', event.error);
-
-            if (event.error === 'no-speech') return;
-            if (event.error === 'aborted') return;
-
-            isRecordingRef.current = false;
-            setRecording(false);
-
-            switch (event.error) {
-                case 'audio-capture':
-                    setError('No microphone found. Check your device settings.');
-                    break;
-                case 'not-allowed':
-                    setError('Microphone access denied. Please allow microphone access.');
-                    break;
-                case 'network':
-                    setError('Network error. Please check your connection.');
-                    break;
-                default:
-                    setError(`Speech error: ${event.error}`);
-            }
-        },
-        [setRecording, setError]
-    );
-
-    const saveTranscript = useCallback(() => {
-        const latestTranscript = useHazloStore.getState().currentTranscript;
-        console.log('[Hazlo/Speech] saveTranscript called. Transcript text:', latestTranscript);
-        const text =
-            typeof latestTranscript === 'string' ? latestTranscript.trim() : '';
-        if (text) {
-            console.log('[Hazlo/Speech] Dispatching addEntry with text:', text);
-            addEntry(text);
-        } else {
-            console.log('[Hazlo/Speech] Transcript is empty, nothing to add.');
-        }
+    const handleFinalTranscript = useCallback((text: string) => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        addEntry(trimmed);
     }, [addEntry]);
 
-    const attachHandlers = useCallback(
-        (recognition: ISpeechRecognition) => {
-            recognition.onresult = handleResult;
-            recognition.onerror = handleError;
+    const speech = useSpeechRecognition({
+        onFinalTranscript: handleFinalTranscript,
+    });
 
-            recognition.onstart = () => {
-                console.log('[Hazlo/Speech] Speech recognition engine started.');
-                setRecording(true);
-                isRecordingRef.current = true;
-                setError(null);
-            };
-
-            recognition.onend = () => {
-                console.log('[Hazlo/Speech] Speech recognition engine ended. isRecordingRef:', isRecordingRef.current);
-                if (isRecordingRef.current) {
-                    const latest = useHazloStore.getState().currentTranscript;
-                    previousSessionsFinalTextRef.current = latest ? latest + ' ' : '';
-                    console.log('[Hazlo/Speech] Auto-restarting. Accumulating previous final transcript:', previousSessionsFinalTextRef.current);
-                    try {
-                        recognition.start();
-                    } catch (err) {
-                        console.warn('[Hazlo/Speech] Recognition restart failed:', err);
-                        isRecordingRef.current = false;
-                        setRecording(false);
-                        saveTranscript();
-                    }
-                } else {
-                    console.log('[Hazlo/Speech] Recording stopped by user. Saving draft...');
-                    saveTranscript();
-                }
-            };
-        },
-        [handleResult, handleError, setRecording, setError, saveTranscript]
+    const selectedLanguageLabel = useMemo(
+        () => speech.languageOptions.find(option => option.value === speech.language)?.label || speech.language,
+        [speech.language, speech.languageOptions]
     );
 
-    const startRecording = useCallback(() => {
-        console.log('[Hazlo/Speech] startRecording requested.');
-        const recognition = createRecognition();
-        if (!recognition) {
-            setIsSpeechSupported(false);
-            setError(unsupportedVoiceMessage);
+    useEffect(() => {
+        setRecording(speech.isListening);
+        setProcessing(speech.isProcessing);
+        setTranscript(speech.displayTranscript);
+        setError(speech.errorMessage);
+    }, [
+        speech.displayTranscript,
+        speech.errorMessage,
+        speech.isListening,
+        speech.isProcessing,
+        setError,
+        setProcessing,
+        setRecording,
+        setTranscript,
+    ]);
+
+    const submitManualText = useCallback((event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        const text = manualText.trim();
+        if (!text) {
+            setManualError('Enter a thought before saving.');
             return;
         }
 
-        previousSessionsFinalTextRef.current = '';
+        addEntry(text);
+        setManualText('');
+        setManualError(null);
+        setIsTextEntryOpen(false);
         clearTranscript();
+    }, [addEntry, clearTranscript, manualText]);
 
-        recognitionRef.current = recognition;
-        attachHandlers(recognition);
-
-        try {
-            recognition.start();
-        } catch (err) {
-            console.error('[Hazlo/Speech] Failed to start recognition:', err);
-            setError('Failed to start voice recognition. Please try again.');
-        }
-    }, [createRecognition, attachHandlers, setError, clearTranscript, unsupportedVoiceMessage]);
-
-    const stopRecording = useCallback(() => {
-        console.log('[Hazlo/Speech] stopRecording requested.');
-        isRecordingRef.current = false;
-        setRecording(false);
-
-        if (recognitionRef.current) {
-            try {
-                recognitionRef.current.stop();
-            } catch (err) {
-                console.warn('[Hazlo/Speech] Stop recognition error:', err);
-            }
-        }
-    }, [setRecording]);
-
-    const toggleRecording = useCallback(() => {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
-    }, [isRecording, stopRecording, startRecording]);
-
-    useEffect(() => {
-        return () => {
-            isRecordingRef.current = false;
-            if (recognitionRef.current) {
-                try {
-                    recognitionRef.current.abort();
-                } catch (_) {
-                    // Ignore cleanup errors.
-                }
-                recognitionRef.current = null;
-            }
-        };
+    const openTextEntry = useCallback(() => {
+        setManualError(null);
+        setIsTextEntryOpen(true);
     }, []);
 
-    const transcriptText =
-        typeof currentTranscript === 'string' ? currentTranscript : '';
+    const closeTextEntry = useCallback(() => {
+        setManualText('');
+        setManualError(null);
+        setIsTextEntryOpen(false);
+    }, []);
+
+    const toggleRecording = useCallback(() => {
+        if (speech.isListening) {
+            speech.stop();
+            return;
+        }
+
+        speech.start();
+    }, [speech]);
+
+    const voiceButtonDisabled = speech.isProcessing || !speech.isSupported;
+    const showTranscript = Boolean(speech.displayTranscript) || speech.isListening;
+    const showManualFallback = isTextEntryOpen || !speech.isSupported || speech.status === 'permission-denied';
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white/95 to-transparent pb-6">
-            <div className="max-w-2xl mx-auto">
-                {(transcriptText || isRecording) && (
-                    <div className="mb-4 p-4 bg-gray-50 rounded-2xl min-h-[80px] max-h-[200px] overflow-y-auto">
-                        {isRecording && !transcriptText && (
-                            <div className="flex items-center gap-2 text-gray-500">
-                                <span className="animate-pulse">Listening...</span>
-                            </div>
-                        )}
-                        {transcriptText && (
-                            <p className="text-gray-800 text-base leading-relaxed">
-                                {transcriptText}
-                                {isRecording && (
-                                    <span className="animate-pulse ml-0.5">|</span>
+        <div className="voice-dock fixed bottom-0 left-0 right-0 z-20 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-10">
+            <div className="app-container">
+                {showTranscript && (
+                    <div
+                        className="mb-3 max-h-44 min-h-20 overflow-y-auto rounded-2xl border p-4 shadow-sm"
+                        style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+                        aria-live="polite"
+                    >
+                        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+                            <span className="inline-flex items-center gap-2">
+                                <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: speech.isListening ? 'var(--color-error-dot)' : 'var(--color-text-muted)' }} aria-hidden="true" />
+                                {speech.isListening ? 'Listening' : 'Transcript'}
+                            </span>
+                            {speech.isListening && (
+                                <span aria-label={`Elapsed recording time ${formatElapsed(speech.elapsedSeconds)}`}>
+                                    {formatElapsed(speech.elapsedSeconds)}
+                                </span>
+                            )}
+                            <span>{selectedLanguageLabel}</span>
+                        </div>
+
+                        {speech.displayTranscript ? (
+                            <p className="overflow-wrap-anywhere text-base leading-7" style={{ color: 'var(--color-text-primary)' }}>
+                                {speech.finalTranscript}
+                                {speech.interimTranscript && (
+                                    <span style={{ color: 'var(--color-text-muted)' }}>
+                                        {speech.finalTranscript ? ' ' : ''}
+                                        {speech.interimTranscript}
+                                    </span>
                                 )}
+                                {speech.isListening && (
+                                    <span className="ml-0.5 animate-pulse">|</span>
+                                )}
+                            </p>
+                        ) : (
+                            <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                                Speak naturally. Finalized speech will be saved when you stop.
                             </p>
                         )}
                     </div>
                 )}
 
-                {error && (
-                    <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-xl text-sm">
-                        {typeof error === 'string' ? error : 'An error occurred'}
+                {speech.errorMessage && (
+                    <div className="mb-3 rounded-xl border p-3 text-sm leading-6" style={{ background: 'var(--color-error-bg)', borderColor: 'var(--color-border)', color: 'var(--color-error-text)' }}>
+                        {speech.errorMessage}
                     </div>
                 )}
 
-                {isSpeechSupported === false && (
-                    <div className="mb-4 p-3 bg-gray-100 text-gray-700 rounded-xl text-sm leading-relaxed">
-                        {unsupportedVoiceMessage}
-                    </div>
-                )}
-
-                <div className="flex justify-center">
-                    <button
-                        id="voice-record-button"
-                        onClick={toggleRecording}
-                        disabled={isProcessing || isSpeechSupported === false}
-                        className={`
-                            relative w-20 h-20 rounded-full flex items-center justify-center
-                            transition-all duration-300 ease-out
-                            ${isRecording
-                                ? 'bg-red-500 hover:bg-red-600 scale-110 shadow-lg shadow-red-200'
-                                : 'bg-gray-900 hover:bg-gray-800 hover:scale-105 shadow-lg shadow-gray-200'
-                            }
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                        `}
+                {showManualFallback && (
+                    <form
+                        className="mb-3 rounded-2xl border p-3 shadow-sm"
+                        style={{ background: 'var(--color-surface-elevated)', borderColor: 'var(--color-border)' }}
+                        onSubmit={submitManualText}
                     >
-                        {isProcessing ? (
-                            <Loader2 className="w-8 h-8 text-white animate-spin" />
-                        ) : isRecording ? (
-                            <>
-                                <MicOff className="w-8 h-8 text-white" />
-                                <span className="absolute inset-0 rounded-full animate-ping bg-red-400 opacity-30" />
-                            </>
-                        ) : (
-                            <Mic className="w-8 h-8 text-white" />
+                        <label className="mb-2 block text-sm font-semibold" htmlFor="manual-entry-text" style={{ color: 'var(--color-text-primary)' }}>
+                            Type instead
+                        </label>
+                        <textarea
+                            id="manual-entry-text"
+                            value={manualText}
+                            onChange={event => {
+                                setManualText(event.target.value);
+                                if (manualError) setManualError(null);
+                            }}
+                            rows={3}
+                            className="min-h-28 w-full resize-y rounded-xl border bg-transparent p-3 text-base leading-6 outline-none"
+                            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+                            placeholder="Type a Hazlo note or task..."
+                        />
+                        {manualError && (
+                            <p className="mt-2 text-sm" style={{ color: 'var(--color-error-text)' }}>
+                                {manualError}
+                            </p>
                         )}
-                    </button>
-                </div>
+                        <div className="mt-3 flex flex-wrap justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={closeTextEntry}
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                                <X className="h-4 w-4" aria-hidden="true" />
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition-transform hover:scale-[1.02]"
+                                style={{ background: 'var(--color-accent)', color: 'var(--color-accent-text)' }}
+                            >
+                                <Keyboard className="h-4 w-4" aria-hidden="true" />
+                                Save entry
+                            </button>
+                        </div>
+                    </form>
+                )}
 
-                <p className="text-center text-gray-500 text-sm mt-3">
-                    {isSpeechSupported === false
-                        ? 'Voice input unavailable'
-                        : isRecording
-                            ? 'Tap to stop and save'
-                            : 'Tap to start recording your thoughts'}
-                </p>
+                <div className="rounded-3xl border px-4 py-4 shadow-sm" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', boxShadow: 'var(--shadow-dock)' }}>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <label className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                            <Languages className="h-4 w-4" aria-hidden="true" />
+                            <span className="sr-only">Recognition language</span>
+                            <select
+                                value={speech.language}
+                                onChange={event => speech.setLanguage(event.target.value)}
+                                disabled={speech.isListening || speech.isProcessing}
+                                className="max-w-[11rem] bg-transparent text-sm font-semibold outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                                style={{ color: 'var(--color-text-primary)' }}
+                                aria-label="Recognition language"
+                            >
+                                {speech.languageOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <button
+                            type="button"
+                            onClick={openTextEntry}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                            <Keyboard className="h-4 w-4" aria-hidden="true" />
+                            Type instead
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-3">
+                        {speech.isListening && (
+                            <button
+                                type="button"
+                                onClick={speech.cancel}
+                                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                                aria-label="Cancel recording"
+                                title="Cancel recording"
+                            >
+                                <X className="h-5 w-5" aria-hidden="true" />
+                            </button>
+                        )}
+
+                        <button
+                            id="voice-record-button"
+                            type="button"
+                            onClick={toggleRecording}
+                            disabled={voiceButtonDisabled}
+                            className={`
+                                relative flex h-16 w-16 items-center justify-center rounded-full sm:h-20 sm:w-20
+                                transition-transform duration-300 ease-out focus-visible:outline-offset-4
+                                ${speech.isListening ? 'scale-105' : 'hover:scale-105'}
+                                disabled:cursor-not-allowed disabled:opacity-50
+                            `}
+                            style={{
+                                background: speech.isListening ? 'var(--color-error-dot)' : 'var(--color-accent)',
+                                color: speech.isListening ? '#ffffff' : 'var(--color-accent-text)',
+                                boxShadow: speech.isListening ? '0 14px 34px rgb(220 74 63 / 0.28)' : '0 14px 34px rgb(24 33 47 / 0.20)',
+                            }}
+                            aria-label={speech.isListening ? 'Stop recording and save finalized speech' : 'Start voice recording'}
+                            aria-pressed={speech.isListening}
+                        >
+                            {speech.isProcessing ? (
+                                <Loader2 className="h-7 w-7 animate-spin sm:h-8 sm:w-8" aria-hidden="true" />
+                            ) : speech.isListening ? (
+                                <>
+                                    <MicOff className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+                                    <span className="absolute inset-0 rounded-full animate-ping opacity-25" style={{ background: 'var(--color-error-dot)' }} aria-hidden="true" />
+                                </>
+                            ) : (
+                                <Mic className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+                            )}
+                        </button>
+
+                        {speech.isListening && (
+                            <button
+                                type="button"
+                                onClick={speech.stop}
+                                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                                aria-label="Stop recording and save"
+                                title="Stop recording and save"
+                            >
+                                <Square className="h-5 w-5" aria-hidden="true" />
+                            </button>
+                        )}
+                    </div>
+
+                    <p className="mt-3 text-center text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                        {!speech.isSupported
+                            ? 'Voice recognition unavailable in this browser'
+                            : speech.isListening
+                                ? 'Stop to save finalized speech, or cancel to discard'
+                                : 'Tap to start recording your thoughts'}
+                    </p>
+                </div>
             </div>
         </div>
     );

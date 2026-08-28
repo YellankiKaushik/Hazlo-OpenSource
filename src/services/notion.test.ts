@@ -73,6 +73,15 @@ describe('saveToNotion', () => {
                 'X-API-Secret': 'test-api-secret',
             }),
         }));
+
+        const requestInit = fetchMock.mock.calls[0][1] as RequestInit;
+        expect(JSON.parse(requestInit.body as string)).toEqual({
+            rawSpeech: 'Call Maya and send the deck',
+            status: 'Not started',
+            capturedAt: '2026-06-17T00:00:00.000Z',
+            clientEntryId: 'entry-1',
+            tasks: [{ text: 'Call Maya', completed: false }],
+        });
     });
 
     it('returns a safe authorization error for 401 responses', async () => {
@@ -113,6 +122,29 @@ describe('saveToNotion', () => {
             error: 'Network error while syncing. Please retry.',
         });
         expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps the original capture timestamp when a sync retry succeeds', async () => {
+        const saveToNotion = await getSaveToNotion();
+        const fetchMock = vi.mocked(fetch);
+        const originalCreatedAt = '2026-06-17T08:45:30.000Z';
+
+        fetchMock
+            .mockResolvedValueOnce(mockResponse(500))
+            .mockResolvedValueOnce(mockResponse(200));
+
+        const result = await settleRetryTimers(saveToNotion(createEntry({
+            createdAt: originalCreatedAt,
+            updatedAt: '2026-06-17T09:10:00.000Z',
+        })));
+
+        expect(result).toEqual({ ok: true });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        for (const call of fetchMock.mock.calls) {
+            const requestInit = call[1] as RequestInit;
+            expect(JSON.parse(requestInit.body as string).capturedAt).toBe(originalCreatedAt);
+        }
     });
 
     it('does not call the API for empty entries', async () => {

@@ -1,7 +1,11 @@
 {
     "name": "hazlo",
     "private": true,
-    "description": "Voice-first task capture app with local extraction and Notion sync.",
+    "description": "Open-source voice-first task capture app with local extraction and Notion sync.",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/YellankiKaushik/Hazlo-OpenSource.git"
+    },
     "version": "0.0.0",
     "type": "module",
     "scripts": {

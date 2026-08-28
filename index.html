@@ -3,8 +3,48 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hazlo - Voice-Powered Thought Organizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f5f0" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Hazlo by Kaushik" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <title>Hazlo by Kaushik</title>
+    <script>
+        (function () {
+            var storageKey = 'hazlo-theme-preference';
+            var preference = 'system';
+            try {
+                var stored = window.localStorage.getItem(storageKey);
+                if (stored === 'light' || stored === 'dark' || stored === 'system') {
+                    preference = stored;
+                }
+            } catch (_) { }
+
+            var systemPrefersDark = false;
+            try {
+                systemPrefersDark = window.matchMedia &&
+                    window.matchMedia('(prefers-color-scheme: dark)').matches;
+            } catch (_) { }
+
+            var activeTheme = preference === 'dark' || (preference === 'system' && systemPrefersDark)
+                ? 'dark'
+                : 'light';
+            var root = document.documentElement;
+            root.classList.toggle('dark', activeTheme === 'dark');
+            root.dataset.theme = activeTheme;
+            root.style.colorScheme = activeTheme;
+
+            var themeMeta = document.querySelector('meta[name="theme-color"]');
+            if (themeMeta) {
+                themeMeta.setAttribute('content', activeTheme === 'dark' ? '#15171a' : '#f7f5f0');
+            }
+        })();
+    </script>
 </head>
 
 <body>

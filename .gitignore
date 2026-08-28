@@ -15,6 +15,7 @@ task.md
 # ── Environment variables (NEVER commit) ─────────────────────────────────────
 .env
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -71,3 +72,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 .vercel
+.vercel/
+
+.vercel
+.env*
+!.env.example

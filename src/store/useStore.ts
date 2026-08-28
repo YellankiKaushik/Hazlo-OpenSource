@@ -88,7 +88,6 @@ export const useHazloStore = create<HazloState>()(
             // ── Add entry ─────────────────────────────────────────────────────
 
             addEntry: (rawText: string) => {
-                console.log('[Hazlo/Store] addEntry called with text:', rawText);
                 if (typeof rawText !== 'string' || !rawText.trim()) {
                     console.warn('[Hazlo/Store] addEntry aborted: rawText is empty or invalid.');
                     return;
@@ -96,7 +95,6 @@ export const useHazloStore = create<HazloState>()(
 
                 const now = new Date();
                 const tasks = extractTasks(rawText);
-                console.log('[Hazlo/Store] Extracted tasks:', tasks);
 
                 const newEntry: Entry = {
                     id: generateId(),
@@ -112,7 +110,6 @@ export const useHazloStore = create<HazloState>()(
 
                 // 1. Commit to localStorage immediately (synchronous, reliable)
                 set(state => {
-                    console.log('[Hazlo/Store] Committing new entry to state and clearing draft.');
                     return {
                         entries: [newEntry, ...state.entries],
                         currentTranscript: '',
@@ -200,7 +197,6 @@ export const useHazloStore = create<HazloState>()(
                     const newTranscript = typeof transcript === 'function'
                         ? transcript(typeof state.currentTranscript === 'string' ? state.currentTranscript : '')
                         : (typeof transcript === 'string' ? transcript : '');
-                    console.log('[Hazlo/Store] setTranscript updated to:', newTranscript);
                     return {
                         currentTranscript: newTranscript
                     };
