@@ -50,7 +50,7 @@ The user taps the microphone button in `src/components/VoiceInput.tsx`. The comp
 
 - `continuous = true`
 - `interimResults = true`
-- `lang = 'en-US'`
+- `lang` set from the selected speech-language preference
 
 As the browser emits results, Hazlo reconstructs a live transcript from final and interim speech segments and displays it above the microphone button.
 
@@ -86,7 +86,7 @@ Each local entry can move through these sync states:
 
 ### Open-Source Self-Hosting
 
-Hazlo is intended to be forked and deployed by the person using it. A user can connect their own Vercel project, Notion integration, and Notion database. The public repository and live demo show the app, but each self-hosted user should provide their own secrets and send data to their own Notion workspace.
+Hazlo is intended to be forked and deployed by the person using it. A user can connect their own Vercel project, Notion integration, and Notion data source. The public repository and live demo show the app, but each self-hosted user should provide their own secrets and send data to their own Notion workspace.
 
 ## 4. Tech Stack
 
@@ -152,14 +152,14 @@ Step-by-step responsibilities:
 | localStorage | Persisted state slice | Keeps entries available after reload. | `hazlo-storage` persisted data. | Zustand `persist` middleware |
 | Notion service | `Entry` | Builds a safe sync payload and sends it to the backend. | HTTP request to `/api/notion-sync`. | `src/services/notion.ts` |
 | Serverless backend | JSON body and headers | Validates method, secret, env vars, raw speech, and tasks. | Notion page creation request. | `api/notion-sync.js` |
-| Notion API | Page payload | Creates the page in the configured database. | Notion page ID on success. | Notion API |
+| Notion API | Page payload | Creates the page in the configured data source. | Notion page ID on success. | Notion API |
 | UI status update | Sync result | Updates `syncStatus`, `syncedAt`, and `syncError`. | Synced or failed local entry. | `src/store/useStore.ts` |
 
 ## 6. Runtime Data Flow
 
 ### Step 1: User starts recording
 
-The user taps the fixed microphone button rendered by `VoiceInput`. The component checks for `window.SpeechRecognition` or `window.webkitSpeechRecognition`. If neither exists, it sets `isSpeechSupported` to `false` and shows "Voice input is not supported in this browser."
+The user taps the fixed microphone button rendered by `VoiceInput`. The speech hook checks for `window.SpeechRecognition` or `window.webkitSpeechRecognition`. If neither exists, it marks speech recognition as unsupported and the UI exposes the manual "Type instead" path.
 
 ### Step 2: Browser produces transcript
 
@@ -221,6 +221,7 @@ The backend builds a Notion page payload using:
 - `data_source_id: NOTION_DATA_SOURCE_ID`
 - `Raw Speech` title property from the transcript
 - `Status` status property mapped to `Not started`, `In progress`, or `Done`
+- `Date` date property set from the original `Entry.createdAt` timestamp
 - one paragraph child block for the full transcript
 - up to 80 `to_do` child blocks from extracted tasks
 
@@ -239,20 +240,30 @@ When an entry is failed, `EntryCard` displays a `Retry` button. The retry action
 ## 7. Folder Structure
 
 ```text
-hazlo/
+Hazlo-OpenSource/
 |-- api/
-|   `-- notion-sync.js
+|   |-- notion-sync.js
+|   `-- notion-sync.test.js
 |-- docs/
 |   |-- ARCHITECTURE.md
+|   |-- DEPLOYMENT.md
 |   |-- PRODUCTION_CHECKLIST.md
+|   |-- SETUP.md
 |   `-- TECHNICAL_DOCUMENTATION.md
+|-- public/
+|   |-- icons/
+|   `-- manifest.webmanifest
 |-- src/
 |   |-- components/
 |   |   |-- EntryCard.tsx
 |   |   |-- EntryList.tsx
 |   |   |-- Header.tsx
 |   |   |-- TaskItem.tsx
+|   |   |-- ThemeToggle.tsx
 |   |   `-- VoiceInput.tsx
+|   |-- hooks/
+|   |   |-- useSpeechRecognition.ts
+|   |   `-- useTheme.ts
 |   |-- pages/
 |   |   `-- Home.tsx
 |   |-- services/
@@ -264,14 +275,21 @@ hazlo/
 |   |   `-- index.ts
 |   |-- utils/
 |   |   |-- dateUtils.ts
+|   |   |-- pwa.test.ts
+|   |   |-- speechRecognition.test.ts
+|   |   |-- speechRecognition.ts
 |   |   |-- taskExtractor.test.ts
-|   |   `-- taskExtractor.ts
+|   |   |-- taskExtractor.ts
+|   |   |-- theme.test.ts
+|   |   `-- theme.ts
 |   |-- App.tsx
 |   |-- index.css
 |   |-- main.tsx
 |   `-- vite-env.d.ts
 |-- .env.example
 |-- .gitignore
+|-- AGENTS.md
+|-- CONTRIBUTING.md
 |-- index.html
 |-- package.json
 |-- pnpm-lock.yaml
@@ -287,18 +305,24 @@ Important files:
 | --- | --- |
 | `api/notion-sync.js` | Vercel Serverless Function that writes entries to Notion. |
 | `docs/ARCHITECTURE.md` | Short architecture overview. |
+| `docs/DEPLOYMENT.md` | Beginner-friendly Vercel deployment and troubleshooting guide. |
 | `docs/PRODUCTION_CHECKLIST.md` | Deployment and verification checklist. |
+| `docs/SETUP.md` | Detailed beginner setup manual. |
 | `docs/TECHNICAL_DOCUMENTATION.md` | Deep technical documentation for developers and self-hosters. |
+| `CONTRIBUTING.md` | Contribution workflow, validation commands, and security rules. |
 | `src/main.tsx` | React entry point that mounts `<App />`. |
 | `src/App.tsx` | Renders the `Home` page. |
 | `src/pages/Home.tsx` | Composes header, grouped entries, pending task banner, and voice input. |
 | `src/components/VoiceInput.tsx` | Manages browser speech recognition and transcript capture. |
+| `src/components/ThemeToggle.tsx` | Lets users choose system, light, or dark theme. |
 | `src/components/EntryList.tsx` | Renders entries grouped by date. |
 | `src/components/EntryCard.tsx` | Displays one entry, sync status, retry, delete, and tasks. |
 | `src/components/TaskItem.tsx` | Displays and updates one local task. |
 | `src/store/useStore.ts` | Global state, persistence, entry creation, retry, task updates, and rollover. |
 | `src/services/notion.ts` | Frontend sync client for `/api/notion-sync`. |
+| `src/utils/speechRecognition.ts` | Browser speech-recognition capability detection and controller logic. |
 | `src/utils/taskExtractor.ts` | Rule-based task extraction. |
+| `src/utils/theme.ts` | Centralized light/dark/system theme helpers. |
 | `src/utils/dateUtils.ts` | Date formatting, grouping, and rollover helpers. |
 | `src/types/index.ts` | Shared `Task`, `Entry`, `EntryGroup`, and `SyncStatus` types. |
 | `.env.example` | Placeholder environment variable template. |
@@ -316,6 +340,7 @@ The frontend is a small React app with one main page and a handful of focused co
 | `Home.tsx` | Main screen. | Reads `entries` from Zustand. | Calls `performMidnightRollover()` on mount. |
 | `Header.tsx` | Sticky app header. | None. | No state actions. |
 | `VoiceInput.tsx` | Voice recording and transcript UI. | Reads recording, processing, transcript, and error state. | Starts/stops speech recognition, updates transcript, adds entries. |
+| `ThemeToggle.tsx` | System/light/dark theme control. | Reads theme preference from `useTheme`. | Updates and persists theme preference. |
 | `EntryList.tsx` | Grouped list renderer. | `EntryGroup[]`. | No store actions directly. |
 | `EntryCard.tsx` | Entry display and sync controls. | One `Entry`. | Deletes entry or retries failed sync. |
 | `TaskItem.tsx` | Task row with checkbox and delete control. | One `Task` and parent entry ID. | Toggles completion or deletes task locally. |
@@ -345,7 +370,7 @@ When the user starts recording, Hazlo:
 1. Creates a new recognition instance.
 2. Enables continuous mode.
 3. Enables interim results.
-4. Sets language to `en-US`.
+4. Sets language from the selected speech-language preference.
 5. Clears the previous transcript.
 6. Attaches `onresult`, `onerror`, `onstart`, and `onend` handlers.
 7. Calls `recognition.start()`.
@@ -360,7 +385,7 @@ The `onend` handler has two paths:
 Unsupported browser behavior:
 
 - If `SpeechRecognition` and `webkitSpeechRecognition` are missing, the microphone button is disabled.
-- The UI shows "Voice input is not supported in this browser."
+- The UI keeps the manual "Type instead" flow available.
 
 Error handling:
 
@@ -504,6 +529,7 @@ It builds a top-level payload from the local entry:
 {
   "rawSpeech": "Today I need to finish the docs and deploy the app.",
   "status": "Not started",
+  "capturedAt": "2026-06-17T08:45:30.000Z",
   "clientEntryId": "entry-123",
   "tasks": [
     { "text": "finish the docs", "completed": false },
@@ -525,6 +551,7 @@ Body:
 {
   "rawSpeech": "Today I need to finish the docs and deploy the app.",
   "status": "Not started",
+  "capturedAt": "2026-06-17T08:45:30.000Z",
   "clientEntryId": "entry-123",
   "tasks": [
     { "text": "finish the docs", "completed": false },
@@ -564,6 +591,7 @@ It exists so Hazlo can write to Notion without exposing `NOTION_TOKEN` to the br
 | --- | --- |
 | Secret protection | `X-API-Secret` checked against `API_SECRET`. |
 | Notion auth | `NOTION_TOKEN` used server-side in the `Authorization` header. |
+| Notion API version | `2025-09-03`, pinned in `api/notion-sync.js`. |
 | Data source target | `NOTION_DATA_SOURCE_ID` used as the Notion `data_source_id`. |
 | Tasks | Converted into Notion `to_do` blocks. |
 | Errors | Returned safely without exposing Notion token or raw Notion responses to the client. |
@@ -578,7 +606,7 @@ Supported methods:
 
 CORS behavior:
 
-- Allowed origins are currently `http://localhost:5173` and `https://hazlo-ai.vercel.app`.
+- Allowed origins are controlled by `ALLOWED_ORIGINS` in `api/notion-sync.js`.
 - Allowed methods are `POST, OPTIONS`.
 - Allowed headers are `Content-Type, X-API-Secret, X-Idempotency-Key`.
 - Same-origin production requests do not need cross-origin CORS access.
@@ -610,6 +638,11 @@ Notion page creation:
     },
     Status: {
       status: { name: status }
+    },
+    Date: {
+      date: {
+        start: capturedAt.iso
+      }
     }
   },
   children: [
@@ -641,19 +674,20 @@ Status mapping:
 Logging:
 
 - Unauthorized attempts are logged without secrets.
-- Notion failures log the client entry ID, status code, and a short error hint.
+- Notion failures log the client entry ID, Notion status, Notion error code, and a trimmed Notion error message without exposing configured secrets.
 - Successful sync logs the client entry ID, page ID, and transcript length.
 
-## 14. Notion Database Model
+## 14. Notion Data Source Model
 
-Hazlo maps each local entry to one Notion page in the configured database.
+Hazlo maps each local entry to one Notion page in the configured data source. In the Notion app, that data source usually appears as a database table.
 
-Database requirements:
+Data source requirements:
 
 | Notion field | Required type | How Hazlo uses it |
 | --- | --- | --- |
 | `Raw Speech` | Title | Stores the transcript title, truncated to Notion's 2000-character rich-text limit if needed. |
 | `Status` | Status | Stores `Not started`, `In progress`, or `Done`. The frontend currently sends `Not started`. |
+| `Date` | Date | Stores the original local `Entry.createdAt` timestamp. |
 
 Page body:
 
@@ -661,19 +695,21 @@ Page body:
 - Extracted tasks are appended as `to_do` child blocks.
 - Completed local tasks sync with `checked: true`; new extracted tasks start as `false`.
 
-Hazlo does not currently create or update Notion properties for due dates, priority, tags, project, client, source URL, or assignee. Those would require additional Notion database properties and code changes.
+Hazlo does not currently create or update Notion properties for due dates, priority, tags, project, client, source URL, or assignee. Those would require additional Notion data source properties and code changes.
 
 ### Required Notion Setup
 
 1. Create a Notion integration from the Notion integrations page.
-2. Copy the integration token.
-3. Create or choose a Notion database.
-4. Add a `Raw Speech` title property if it does not already exist.
-5. Add a `Status` status property with values such as `Not started`, `In progress`, and `Done`.
-6. Share the database with the integration.
-7. Copy the database ID.
-8. Add the token, database ID, and API secret values to Vercel environment variables.
-9. Redeploy after setting or changing frontend `VITE_` variables.
+2. Allow the integration to read and insert content.
+3. Copy the integration token.
+4. Create or choose a Notion database/data source.
+5. Add a `Raw Speech` title property if it does not already exist.
+6. Add a `Status` status property with values such as `Not started`, `In progress`, and `Done`.
+7. Add a custom `Date` date property.
+8. Share the data source with the integration.
+9. Copy the data source ID from "Manage data sources" in Notion, or retrieve the parent database and read the `data_sources` array.
+10. Add the token, data source ID, and API secret values to Vercel environment variables.
+11. Redeploy after setting or changing frontend `VITE_` variables.
 
 ## 15. Environment Variables
 
@@ -703,7 +739,7 @@ Never commit:
 - Notion tokens
 - API secrets
 - Vercel tokens
-- Real database IDs
+- Real data source IDs
 - Any copied production credentials
 
 ## 16. Security Model
@@ -751,13 +787,14 @@ pnpm install --frozen-lockfile
 
 - Go to the Notion integrations page.
 - Create an internal integration.
+- Allow the integration to read and insert content.
 - Copy the integration token for local/server configuration.
 
-4. Create and share a Notion database.
+4. Create and share a Notion data source.
 
-- Create a database with `Raw Speech` and `Status` properties.
-- Share the database with the integration.
-- Copy the database ID.
+- Create a data source with `Raw Speech`, `Status`, and `Date` properties.
+- Share the data source with the integration.
+- Copy the data source ID.
 
 5. Create `.env.local` from the template.
 
@@ -795,9 +832,11 @@ Local backend options:
 
 ```bash
 vercel link
-vercel env pull .env --environment=development
+vercel env pull .env.local --environment=development
 vercel dev
 ```
+
+Use `vercel env pull` only when the variables already exist in Vercel. If `.env.local` was filled manually, keep it and run `vercel dev`.
 
 If using only the Vite dev server while calling a deployed backend, set `VITE_API_BASE_URL` to the deployed backend origin intentionally. Remove it or leave it empty for same-origin production on Vercel.
 
@@ -840,7 +879,8 @@ dist
 - Record a short task.
 - Confirm the entry appears locally.
 - Confirm the sync badge changes from `Syncing` to `Synced`.
-- Confirm a Notion page appears in the target database.
+- Confirm a Notion page appears in the target data source.
+- Confirm the Notion page has `Raw Speech`, `Status`, and `Date` properties populated.
 - Confirm extracted tasks appear as `to_do` blocks when extraction found tasks.
 
 Important Vercel note:
@@ -849,11 +889,11 @@ Vite injects `VITE_` variables at build time. After changing `VITE_API_SECRET` o
 
 If Notion sync fails, check:
 
-- The database is shared with the Notion integration.
+- The data source is shared with the Notion integration.
 - `NOTION_TOKEN` is correct.
 - `NOTION_DATA_SOURCE_ID` is the correct data source ID.
 - `API_SECRET` and `VITE_API_SECRET` match.
-- The Notion database contains `Raw Speech` and `Status`.
+- The Notion data source contains `Raw Speech`, `Status`, and `Date`.
 
 ## 19. Testing Strategy
 
@@ -863,8 +903,13 @@ Current test files:
 
 | Test file | What it covers |
 | --- | --- |
-| `src/utils/taskExtractor.test.ts` | Numbered lists, bullet lists, simple "and" tasks, short imperatives, empty input, noisy input, and mixed longer text. |
+| `api/notion-sync.test.js` | Serverless handler validation, data source parent, captured dates, safe Notion diagnostics, and secret-safe responses. |
 | `src/services/notion.test.ts` | Successful sync, API headers, safe `401` error, retries for `500`, retries for network errors, and empty-entry handling. |
+| `src/store/useStore.test.ts` | Entry creation, local persistence behavior, sync status updates, and original `createdAt` sync payload behavior. |
+| `src/utils/pwa.test.ts` | Manifest and installability metadata. |
+| `src/utils/speechRecognition.test.ts` | Standard and WebKit speech recognition support, result handling, language preferences, errors, and restarts. |
+| `src/utils/taskExtractor.test.ts` | Numbered lists, bullet lists, simple "and" tasks, short imperatives, empty input, noisy input, and mixed longer text. |
+| `src/utils/theme.test.ts` | Theme preference normalization, system preference handling, root class updates, and storage behavior. |
 
 The Notion service tests mock `fetch`. They do not call real Notion, do not require real Notion credentials, and do not use production secrets.
 
@@ -890,20 +935,25 @@ What each command validates:
 
 | Problem | Likely Cause | Fix |
 | --- | --- | --- |
+| `401` from `/api/notion-sync` | `API_SECRET` and `VITE_API_SECRET` do not match. | Set both values to the same secret and redeploy after changing `VITE_API_SECRET`. |
+| `500` or `server_not_configured` | `NOTION_TOKEN` or `NOTION_DATA_SOURCE_ID` is missing. | Add the missing variable in Vercel for the environment you are testing. |
+| `502` or `notion_sync_failed` | Notion rejected the request or the integration/schema is wrong. | Check Vercel function logs, then verify token, sharing, data source ID, and schema. |
+| Notion `404 object_not_found` | Wrong data source ID or the integration does not have access. | Copy the data source ID again and share the data source with the integration. |
+| Notion `403 restricted_resource` | Integration permission/share issue. | Reconnect or re-share the data source with the integration. |
+| Notion `400 validation_error` | Notion property schema mismatch. | Confirm `Raw Speech` is Title, `Status` is Status, and `Date` is Date. |
 | Voice input does not work | Browser does not support `SpeechRecognition` or `webkitSpeechRecognition`. | Use a Chromium-based browser and confirm the UI does not show the unsupported browser message. |
 | Browser asks for microphone permission | First-time microphone access prompt. | Allow microphone access for the site. |
 | Browser does not support speech recognition | Browser API is missing. | Switch browsers or use a platform that supports Web Speech API recognition. |
 | Entry appears but Notion sync fails | Local save succeeded, backend or Notion write failed. | Check the sync badge error, Vercel function logs, env vars, and Notion integration sharing. |
 | `Sync failed` appears | `saveToNotion` returned a safe failure message. | Click `Retry` after checking configuration or network state. |
-| API secret mismatch | `VITE_API_SECRET` does not match `API_SECRET`. | Set both values to the same secret and redeploy after changing `VITE_API_SECRET`. |
-| Notion database not shared with integration | The integration cannot access the database. | Open the database in Notion and share it with the integration. |
+| Notion data source not shared with integration | The integration cannot access the data source. | Open the data source in Notion and share it with the integration. |
 | Missing env vars in Vercel | Backend cannot read required values. | Add `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, and `API_SECRET` in Vercel settings. |
 | Vercel env vars changed but app was not redeployed | Frontend bundle still has old `VITE_` values. | Redeploy the project after changing any `VITE_` variable. |
 | Localhost cannot call API | Vite dev server does not run Vercel functions by itself. | Use `vercel dev` for local API routes or set `VITE_API_BASE_URL` to a deployed backend. |
 | CORS/preflight issue | Separate frontend origin is not in `ALLOWED_ORIGINS`. | Host frontend/backend same-origin or update the allowed origins in the backend route. |
 | Tasks are not extracted perfectly | Extractor is rule-based and simple. | Use clearer bullet, numbered, or imperative phrasing; improve `taskExtractor.ts` in a fork if needed. |
 | Notion page created but tasks missing | Extractor returned no tasks, tasks were invalid, or task count exceeded handling limits. | Check the local entry tasks; try numbered or bullet task input. |
-| Notion returns configuration errors | Database schema does not match expectations. | Confirm `Raw Speech` is a title property and `Status` is a status property. |
+| Notion returns configuration errors | Data source schema does not match expectations. | Confirm `Raw Speech` is a title property, `Status` is a status property, and `Date` is a date property. |
 
 ## 21. Limitations
 
@@ -913,7 +963,7 @@ What each command validates:
 - The API secret model is lightweight and not full authentication.
 - Hazlo is not a full multi-user SaaS.
 - There are no user accounts yet.
-- The Notion schema is simple: `Raw Speech`, `Status`, transcript body, and `to_do` blocks.
+- The Notion schema is simple: `Raw Speech`, `Status`, `Date`, transcript body, and `to_do` blocks.
 - Offline support is limited to browser local persistence after the app has loaded.
 - Data is persisted locally in the browser and synced to the configured Notion workspace.
 - Local task edits after sync do not currently update the already-created Notion page.
@@ -930,7 +980,7 @@ Realistic roadmap ideas:
 - Calendar integration.
 - Reminders.
 - Recurring tasks.
-- Better Notion database schema.
+- Better Notion data source schema.
 - Mobile and PWA improvements.
 - Export/import.
 - Multi-workspace support.
@@ -949,8 +999,8 @@ Personal setup:
 1. Fork the GitHub repository.
 2. Clone or import the fork into Vercel.
 3. Create your own Notion integration.
-4. Create your own Notion database.
-5. Share that database with your integration.
+4. Create your own Notion data source with `Raw Speech`, `Status`, and `Date`.
+5. Share that data source with your integration.
 6. Copy your own integration token and data source ID.
 7. Add your own env vars in Vercel:
    - `NOTION_TOKEN`

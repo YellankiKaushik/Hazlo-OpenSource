@@ -13,13 +13,8 @@ artifacts/
 task.md
 
 # ── Environment variables (NEVER commit) ─────────────────────────────────────
-.env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.production
+.env*
+!.env.example
 
 # ── Firebase ──────────────────────────────────────────────────────────────────
 firebase-debug.log
@@ -71,9 +66,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-.vercel
-.vercel/
 
-.vercel
-.env*
-!.env.example
+# ── Vercel ───────────────────────────────────────────────────────────────────
+.vercel/

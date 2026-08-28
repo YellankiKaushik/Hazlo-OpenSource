@@ -1,174 +1,164 @@
 # Hazlo
 
+Hazlo is an open-source, voice-first task capture app that turns spoken or typed thoughts into local task entries and syncs them to your own Notion workspace through a small Vercel backend.
+
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=111)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=fff)](https://vite.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![Vercel](https://img.shields.io/badge/Vercel-ready-000?logo=vercel&logoColor=fff)](https://vercel.com/)
 [![Notion API](https://img.shields.io/badge/Notion-API-000?logo=notion&logoColor=fff)](https://developers.notion.com/)
 
-**Live Demo:** [https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app/)
-**GitHub Repo:** [https://github.com/YellankiKaushik/Hazlo-OpenSource](https://github.com/YellankiKaushik/Hazlo-OpenSource)
+## Live Demo
 
-Hazlo is a voice-first task capture app for turning spoken thoughts into organized tasks. It is built for moments when opening a full task manager is too much friction: speak once, keep the raw thought, extract tasks locally, and sync the result to Notion.
+[https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app/)
 
-## What It Solves
+## What Hazlo Does
 
-Most productivity tools ask you to organize before you capture. Hazlo flips that flow:
+Hazlo is built for fast personal capture:
 
-1. Speak naturally.
-2. Hazlo extracts likely tasks.
-3. Entries save locally right away.
-4. The transcript and tasks sync to Notion in the background.
+```text
+Speak or type
+  -> Hazlo extracts tasks
+  -> Entries save in your browser
+  -> Entries sync to Notion
+```
 
-Hazlo is currently designed for personal or self-hosted use. It does not include full multi-user authentication yet.
+The app keeps the raw thought as the source text, extracts likely tasks locally, saves immediately to browser storage, and then sends the entry to a Vercel API route that writes to Notion.
 
-## Core Features
+## Features
 
-- Voice capture through the browser Web Speech API.
-- Manual text entry fallback for unsupported browsers or denied microphone access.
-- Local task extraction from spoken transcripts.
+- Voice input with browser speech recognition.
+- Manual "Type instead" fallback when speech is unavailable or typing is faster.
+- Automatic task extraction from simple task phrases, bullets, numbered lists, and "and" separated actions.
 - Local persistence with Zustand and `localStorage`.
-- Vercel Serverless Function for Notion sync.
-- Notion page creation with extracted tasks as `to_do` blocks.
-- Sync states: `Syncing`, `Synced`, `Sync failed`, and `Retry`.
-- API secret protection between the frontend and backend endpoint.
-- Adaptive System, Light, and Dark interface themes.
-- Installable mobile web app metadata and icons.
+- Notion synchronization through a server-side Vercel Function.
+- Retry handling for failed Notion sync attempts.
+- Dark, light, and system theme support.
+- Responsive UI for desktop and mobile.
+- PWA metadata, manifest, and install icons.
+- Vercel backend route for protecting the Notion token from the browser bundle.
 
-## Tech Stack
+## Screenshots
 
-- React 18
-- Vite
-- TypeScript
-- Tailwind CSS
-- Zustand
-- Vitest
-- Vercel Serverless Functions
-- Notion API
+No tracked screenshots are included yet. Add future screenshots to a tracked folder such as `docs/screenshots/`, then place them here with short captions showing the main capture screen, manual entry fallback, theme states, and Notion result.
 
-## Architecture
+## How It Works
 
 ```text
 Browser
-  VoiceInput -> Zustand store -> localStorage
-       |             |
-       |             +-> taskExtractor.ts
-       |
-       +-> src/services/notion.ts
-              POST /api/notion-sync
-                    |
-                    +-> api/notion-sync.js
-                          validates API secret
-                          writes transcript and to_do blocks to Notion
+|
++-- React UI
+|
++-- Zustand/localStorage
+|
++-- Task extractor
+|
++-- POST /api/notion-sync
+|
++-- Vercel Function
+|
++-- Notion API
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for more detail.
+In plain English:
 
-## Documentation
+1. You speak into the browser or type a note manually.
+2. React shows the UI and sends the final text into the app store.
+3. Zustand saves the entry in `localStorage` first, so the entry remains after refresh.
+4. The task extractor creates local task items from the text.
+5. The frontend posts the entry to `/api/notion-sync`.
+6. The Vercel Function checks the API secret, reads server-side Notion credentials, and creates a Notion page.
+7. If sync fails, the local entry stays available and shows a retry action.
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Production Checklist](docs/PRODUCTION_CHECKLIST.md)
-- [Technical Documentation](docs/TECHNICAL_DOCUMENTATION.md)
+## Tech Stack
 
-## Voice Input
+| Technology | What it does in Hazlo |
+| --- | --- |
+| React | Builds the user interface. |
+| Vite | Runs the local dev server and builds the production frontend. |
+| TypeScript | Adds type checking to the app code. |
+| Zustand | Stores entries, tasks, sync status, and voice UI state. |
+| Tailwind CSS | Provides utility classes and theme-friendly styling. |
+| Vitest | Runs unit tests for extraction, sync, speech, theme, store, and PWA behavior. |
+| Vercel | Hosts the frontend and the `/api/notion-sync` serverless function. |
+| Notion API | Creates Notion pages and task blocks in your workspace. |
+| pnpm | Installs dependencies and runs project scripts. |
 
-Hazlo uses the browser `SpeechRecognition` API where available, supporting both standard and WebKit browser implementations. While recording, finalized and interim transcript segments are shown in the UI. When recording stops, Hazlo saves only finalized transcript text as an entry, extracts tasks, persists the entry locally, and starts Notion sync.
+## Prerequisites
 
-Voice support depends on the browser and operating system speech service. Chromium-based browsers usually provide the best support. Use **Type instead** when speech recognition is unsupported, microphone permission is denied, or typing is easier; manual entries use the same task extraction, persistence, timestamp, and Notion synchronization pipeline.
+You need:
 
-## Notion Sync
+- Git, for cloning the repository.
+- Node.js, for running JavaScript tooling.
+- pnpm, for installing packages and running scripts.
+- A Notion account, for the destination data source.
+- A Vercel account, if you want your own deployed backend and public URL.
 
-The frontend sends entries to `/api/notion-sync`. The Vercel function:
+Check your tools:
 
-- checks `X-API-Secret` against `API_SECRET`
-- validates the request body
-- uses server-side `NOTION_TOKEN` and `NOTION_DATA_SOURCE_ID`
-- creates a Notion page
-- appends extracted tasks as Notion `to_do` blocks
-- returns a safe success or failure response
+```bash
+git --version
+node --version
+pnpm --version
+```
 
-Real Notion credentials stay server-side and are never required in the browser bundle.
+If `pnpm --version` fails but Node and npm are installed, install pnpm:
 
-## Setup
+```bash
+npm install -g pnpm
+```
 
-Clone the repository:
+Vercel CLI is only needed for full-stack local development with Vercel Functions. You can deploy through the Vercel website without installing it globally.
+
+## Quick Start
+
+1. Clone the repository.
 
 ```bash
 git clone https://github.com/YellankiKaushik/Hazlo-OpenSource.git
 cd Hazlo-OpenSource
 ```
 
-Install dependencies:
+2. Install dependencies.
 
 ```bash
 pnpm install
 ```
 
-Create a Notion integration:
+3. Create your local environment file.
 
-1. Go to https://www.notion.so/profile/integrations.
-2. Create an internal integration.
-3. Copy the integration token.
-4. Create or choose a Notion data source.
-5. Share the data source with the integration.
-6. Copy the data source ID from Notion.
-
-Hazlo expects the data source to include:
-
-- `Raw Speech`: title property
-- `Status`: status property with `Not started`, `In progress`, and `Done`
-- `Date`: date property
-
-## Environment Variables
-
-Copy `.env.example` for local use, or configure these in Vercel Project Settings:
-
-```env
-NOTION_TOKEN=your_notion_token_here
-NOTION_DATA_SOURCE_ID=your_notion_data_source_id_here
-API_SECRET=generate_a_random_value
-VITE_API_SECRET=use_the_same_value_as_API_SECRET
+```bash
+cp .env.example .env.local
 ```
 
-Notes:
+On Windows PowerShell:
 
-- `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, and `API_SECRET` are server-side Vercel variables.
-- `VITE_API_SECRET` is compiled into the frontend and must match `API_SECRET`.
-- `VITE_API_BASE_URL` is optional and should remain empty for same-origin production deployments.
+```powershell
+Copy-Item .env.example .env.local
+```
 
-## Local Development
+4. Create a Notion integration and data source using the Notion setup section below.
 
-Frontend-only development:
+5. Generate an API secret and put the same value in both `API_SECRET` and `VITE_API_SECRET`.
+
+6. Run the frontend.
 
 ```bash
 pnpm dev
 ```
 
-Full local API testing with Vercel:
+7. Run the full local backend when you need to test Notion sync locally.
 
 ```bash
+npm install -g vercel
 vercel link
-vercel env pull .env --environment=development
+vercel env pull .env.local --environment=development
 vercel dev
 ```
 
-If you run Vite separately while pointing at another backend, set `VITE_API_BASE_URL` intentionally and remove it when done.
+Use `vercel env pull` only when the values already exist in Vercel. If you filled `.env.local` manually, keep that file and run `vercel dev`.
 
-## Vercel Deployment
-
-1. Connect the GitHub repository to Vercel.
-2. Add the required environment variables in Vercel Project Settings.
-3. Deploy from `main` or run:
-
-```bash
-pnpm deploy:vercel
-```
-
-Vercel serves `api/notion-sync.js` as the backend route. `vercel.json` keeps non-API routes pointed at the React app.
-
-## Testing
-
-Run these before shipping changes:
+8. Run validation before committing changes.
 
 ```bash
 pnpm test
@@ -177,24 +167,211 @@ pnpm build
 git diff --check
 ```
 
-The current unit tests cover task extraction, speech-recognition behavior, manual entry behavior, theme behavior, PWA metadata, the Notion sync client, and the serverless Notion handler with mocked `fetch`. They do not call a real microphone or real Notion.
+For a slower, more detailed walkthrough, see [docs/SETUP.md](docs/SETUP.md).
 
-## Security Notes
+## Notion Setup: Very Important
 
-- Never commit `.env` or `.env.local`.
-- Never commit real Notion tokens, database IDs, Vercel tokens, or API secrets.
-- Rotate the Notion token immediately if it is exposed.
-- `API_SECRET` and `VITE_API_SECRET` must match.
-- This app is intended for personal or self-hosted usage and does not yet provide full multi-user auth.
+Hazlo writes to a [Notion data source](https://developers.notion.com/reference/data-source). In the Notion app, this usually appears as a database table, but Hazlo's backend sends a `data_source_id`.
 
-## Production Checklist
+1. Open [Notion integrations](https://www.notion.so/profile/integrations).
+2. Create a new internal integration.
+3. Copy the integration token. This becomes `NOTION_TOKEN`.
+4. In the integration capabilities, allow the integration to read and insert content so it can access the data source and create pages.
+5. Create a new Notion database or choose an existing one.
+6. Open the database as a full page.
+7. Add the integration to the database from the Notion share/connections menu.
+8. Copy the data source ID. In current Notion, open the database settings, choose "Manage data sources", open the data source menu, and copy the data source ID. If your Notion UI does not show that option, use the Notion API to [retrieve the parent database](https://developers.notion.com/reference/retrieve-a-database) and read the `data_sources` array.
+9. Put that value in `NOTION_DATA_SOURCE_ID`.
 
-Use [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) before or after production deploys.
+Create these exact properties in the target Notion data source:
+
+| Property name | Type | Required details |
+| --- | --- | --- |
+| `Raw Speech` | Title | Stores the transcript title. |
+| `Status` | Status | Must include `Not started`, `In progress`, and `Done`. |
+| `Date` | Date | Stores the original Hazlo entry timestamp. |
+
+Extra Notion columns are allowed. Hazlo will ignore columns it does not write.
+
+A built-in Notion "Created time" property is not a substitute for the custom `Date` property. The backend explicitly writes to a property named `Date`.
+
+## Environment Variables
+
+Environment variables are configuration values that live outside the source code. They let you use your own Notion workspace and secrets without committing private values to Git.
+
+Hazlo uses these variables:
+
+| Variable | Required | Used by | Meaning |
+| --- | --- | --- | --- |
+| `NOTION_TOKEN` | Yes | Server only | Secret Notion integration token. Never expose this in frontend code. |
+| `NOTION_DATA_SOURCE_ID` | Yes | Server only | ID of the Notion data source where pages should be created. |
+| `API_SECRET` | Yes | Server only | Shared app secret expected by the backend. |
+| `VITE_API_SECRET` | Yes | Browser bundle | Frontend copy of `API_SECRET`, sent as `X-API-Secret`. |
+| `VITE_API_BASE_URL` | No | Browser bundle | Optional backend origin. Leave blank for same-origin Vercel deployments. |
+
+`API_SECRET` and `VITE_API_SECRET` must contain exactly the same value.
+
+Safe example:
+
+```env
+NOTION_TOKEN=your_notion_token_here
+NOTION_DATA_SOURCE_ID=your_notion_data_source_id_here
+API_SECRET=generate_a_random_value
+VITE_API_SECRET=use_the_same_value_as_API_SECRET
+VITE_API_BASE_URL=
+```
+
+Never commit real values.
+
+## How to Generate API_SECRET
+
+Use Node to generate a random value:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Use the generated value for both:
+
+- `API_SECRET`
+- `VITE_API_SECRET`
+
+Important: `VITE_API_SECRET` is embedded in frontend code because Vite exposes `VITE_` variables to the browser bundle. It should match `API_SECRET`, but it is not equivalent to a truly private server-only credential. Hazlo is designed primarily for personal and self-hosted deployments, not as a complete multi-user authentication system.
+
+## Local Development
+
+### Frontend Only
+
+```bash
+pnpm dev
+```
+
+This starts the Vite dev server, usually at `http://localhost:5173`.
+
+Frontend-only mode is useful for UI work, theme checks, task extraction, and localStorage behavior. Notion sync may fail in this mode because Vite alone does not run the Vercel `/api/notion-sync` function.
+
+### Full Stack With Vercel
+
+Install the Vercel CLI if needed:
+
+```bash
+npm install -g vercel
+```
+
+Link the project and pull local env values:
+
+```bash
+vercel link
+vercel env pull .env.local --environment=development
+```
+
+Use `vercel env pull` only if the variables already exist in Vercel. If you are setting up locally first, fill `.env.local` manually from `.env.example` instead.
+
+Run the Vercel local runtime:
+
+```bash
+vercel dev
+```
+
+Use this mode when you want local frontend plus local `/api/notion-sync` behavior.
+
+## Testing
+
+Run:
+
+```bash
+pnpm test
+pnpm typecheck
+pnpm build
+git diff --check
+```
+
+What they verify:
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm test` | Runs Vitest unit tests. |
+| `pnpm typecheck` | Runs TypeScript without emitting files. |
+| `pnpm build` | Builds the production Vite bundle. |
+| `git diff --check` | Checks changed lines for whitespace errors. |
+
+The tests mock browser and network behavior. They do not use a real microphone, real Notion token, or real Notion workspace.
+
+## Deploying to Vercel: Beginner Guide
+
+1. Fork this repository or push your copy to your own GitHub account.
+2. Open [Vercel](https://vercel.com/) and create a new project.
+3. Import your GitHub repository.
+4. Let Vercel detect the Vite framework preset.
+5. Set the install command to `pnpm install --frozen-lockfile` if Vercel asks.
+6. Set the build command to `pnpm build` if Vercel asks.
+7. Confirm the output directory is `dist`.
+8. Add these environment variables in Vercel Project Settings: `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, `API_SECRET`, `VITE_API_SECRET`, and optional `VITE_API_BASE_URL`.
+9. Make sure the required variables are enabled for Production.
+10. Deploy.
+11. If you change any environment variable later, redeploy. This is especially important for `VITE_` variables because Vite injects them during build.
+12. Visit the deployed URL.
+13. Create a test entry.
+14. Confirm the entry appears in Notion.
+
+For more deployment detail, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Verifying Deployment
+
+Use this checklist after deployment:
+
+- Website loads.
+- Theme toggle switches between system, light, and dark.
+- "Type instead" creates an entry.
+- Microphone works in browsers that support speech recognition.
+- Entry remains after refreshing the page.
+- Task extraction creates tasks for simple task phrasing.
+- Notion page is created.
+- Retry appears and works when sync fails.
 
 ## Troubleshooting
 
-- `401 Unauthorized`: `VITE_API_SECRET` does not match `API_SECRET`.
-- `server_not_configured`: `NOTION_TOKEN` or `NOTION_DATA_SOURCE_ID` is missing in Vercel.
-- `rawSpeech_required`: the frontend sent an empty transcript.
-- `Notion sync failed`: retry from the entry card, then check Vercel function logs.
-- Microphone unavailable: allow microphone access, try a Chromium-based browser, or use **Type instead**.
+Vercel function logs are the main place to diagnose backend problems. In Vercel, open the project, choose the deployment, and inspect function logs for `/api/notion-sync`.
+
+| Problem | Likely cause | Fix |
+| --- | --- | --- |
+| `401` from `/api/notion-sync` | `API_SECRET` and `VITE_API_SECRET` do not match. | Set both to exactly the same value and redeploy after changing `VITE_API_SECRET`. |
+| `500` or `server_not_configured` | `NOTION_TOKEN` or `NOTION_DATA_SOURCE_ID` is missing in Vercel. | Add the missing server-side variable and redeploy. |
+| `502` or `notion_sync_failed` | Notion rejected the request or the integration/schema is wrong. | Check Vercel logs, data source sharing, token, and schema. |
+| `404 object_not_found` from Notion | Wrong data source ID, or the integration cannot access it. | Copy the data source ID again and share the data source with the integration. |
+| `403 restricted_resource` from Notion | Integration permission or sharing issue. | Re-share the data source with the integration and check integration capabilities. |
+| `400 validation_error` from Notion | Notion property schema mismatch. | Confirm `Raw Speech` is Title, `Status` is Status, and `Date` is Date. |
+| Voice recognition unavailable | Browser/device support or microphone permission. | Try a Chromium-based browser, allow microphone access, or use "Type instead". |
+| `VITE_` variable changed but app still behaves like the old value | Production frontend was not rebuilt. | Redeploy after changing any `VITE_` variable. |
+
+## Project Structure
+
+| Path | Purpose |
+| --- | --- |
+| `src/components` | Reusable UI pieces such as voice input, entries, tasks, header, and theme toggle. |
+| `src/hooks` | React hooks for speech recognition and theme state. |
+| `src/pages` | Page-level app composition. |
+| `src/services` | Frontend service code for calling the backend sync route. |
+| `src/store` | Zustand store, local persistence, entry creation, retry, and task actions. |
+| `src/utils` | Task extraction, speech recognition controller, date helpers, and theme utilities. |
+| `src/types` | Shared TypeScript types. |
+| `api/notion-sync.js` | Vercel Function that validates requests and writes to Notion. |
+| `public` | PWA manifest and icons. |
+| `docs` | Deeper architecture, setup, deployment, production, and technical documentation. |
+
+## Security
+
+- Never commit `.env`, `.env.local`, real Notion tokens, API secrets, Vercel credentials, or copied production values.
+- Keep `NOTION_TOKEN` server-side only.
+- Rotate leaked Notion tokens or API secrets immediately.
+- Treat all `VITE_` variables as browser-visible.
+- Hazlo is designed primarily for personal/self-hosted use.
+- Hazlo does not provide complete multi-user authentication.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+Hazlo is released under the [MIT License](LICENSE). You can use, modify, and distribute it under the terms of that license.

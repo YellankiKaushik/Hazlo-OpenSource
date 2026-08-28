@@ -41,6 +41,7 @@ api/notion-sync.js
 - `api/notion-sync.js`: Vercel Serverless Function for Notion writes.
 - Required server-side env vars: `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, `API_SECRET`.
 - Required frontend env var: `VITE_API_SECRET`, which must match `API_SECRET`.
+- Optional frontend env var: `VITE_API_BASE_URL`, used only when the frontend should call a separate backend origin.
 
 ## Data Model
 
@@ -52,7 +53,7 @@ Each local entry stores:
 - sync status: `pending`, `synced`, or `failed`
 - optional sync error details for retry/debugging
 
-The Notion page stores the transcript in the `Raw Speech` title property and appends extracted tasks as `to_do` blocks.
+The Notion page stores the transcript in the `Raw Speech` title property, writes the original entry timestamp to the custom `Date` property, and appends extracted tasks as `to_do` blocks.
 
 ## Failure Handling
 

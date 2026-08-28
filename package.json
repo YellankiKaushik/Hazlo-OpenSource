@@ -15,7 +15,7 @@
         "test": "vitest run",
         "preview": "vite preview",
         "vercel:pull": "vercel pull --yes --environment=development",
-        "dev:vercel": "npm run vercel:pull && vercel dev",
+        "dev:vercel": "pnpm vercel:pull && vercel dev",
         "deploy:vercel": "vercel --prod"
     },
     "dependencies": {
