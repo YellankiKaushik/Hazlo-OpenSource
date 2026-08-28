@@ -1,4 +1,4 @@
-const NOTION_API_VERSION = '2022-06-28';
+const NOTION_API_VERSION = '2025-09-03';
 
 // Notion rich-text blocks accept up to 2000 characters each.
 const NOTION_TEXT_LIMIT = 2000;
@@ -107,6 +107,38 @@ function validateTasks(input) {
   return { ok: true, tasks };
 }
 
+function parseNotionErrorBody(errorBody) {
+  try {
+    const parsed = JSON.parse(errorBody);
+    return {
+      code: typeof parsed.code === 'string' ? parsed.code : 'unknown',
+      message: typeof parsed.message === 'string' ? parsed.message : 'No Notion error message provided.',
+    };
+  } catch (_) {
+    return {
+      code: 'unparseable_error',
+      message: 'Notion returned an unparseable error body.',
+    };
+  }
+}
+
+function normalizeCapturedAt(value) {
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return {
+        iso: parsed.toISOString(),
+        usedFallback: false,
+      };
+    }
+  }
+
+  return {
+    iso: new Date().toISOString(),
+    usedFallback: true,
+  };
+}
+
 function buildTranscriptBlock(rawSpeech) {
   return {
     object: 'block',
@@ -143,18 +175,24 @@ export default async function handler(req, res) {
   }
 
   const notionToken = process.env.NOTION_TOKEN || '';
-  const notionDatabaseId = process.env.NOTION_DATABASE_ID || '';
+  const notionDataSourceId = process.env.NOTION_DATA_SOURCE_ID || '';
   const apiSecret = process.env.API_SECRET || '';
 
   const clientSecret = getHeaderValue(req.headers['x-api-secret']);
 
   if (!apiSecret || clientSecret !== apiSecret) {
-    console.error('[Hazlo/Vercel] Unauthorized sync attempt');
+    console.error('[Hazlo/Vercel] Unauthorized sync attempt', {
+      apiSecretConfigured: Boolean(apiSecret),
+      clientSecretProvided: Boolean(clientSecret),
+    });
     return json(res, 401, { error: 'unauthorized' });
   }
 
-  if (!notionToken || !notionDatabaseId) {
-    console.error('[Hazlo/Vercel] Missing NOTION_TOKEN or NOTION_DATABASE_ID');
+  if (!notionToken || !notionDataSourceId) {
+    console.error('[Hazlo/Vercel] Missing server configuration', {
+      notionTokenConfigured: Boolean(notionToken),
+      notionDataSourceIdConfigured: Boolean(notionDataSourceId),
+    });
     return json(res, 500, { error: 'server_not_configured' });
   }
 
@@ -167,6 +205,7 @@ export default async function handler(req, res) {
   const status = mapStatus(body.status);
   const clientEntryId = typeof body.clientEntryId === 'string' ? body.clientEntryId : 'none';
   const taskValidation = validateTasks(body.tasks);
+  const capturedAt = normalizeCapturedAt(body.capturedAt);
 
   if (!rawSpeech) {
     return json(res, 400, { error: 'rawSpeech_required' });
@@ -179,11 +218,18 @@ export default async function handler(req, res) {
   const title = buildTitle(rawSpeech);
   const tasks = taskValidation.tasks;
 
+  if (capturedAt.usedFallback) {
+    console.warn('[Hazlo/Vercel] Missing or invalid capturedAt; using server timestamp fallback', {
+      clientEntryId,
+      capturedAtProvided: typeof body.capturedAt === 'string',
+    });
+  }
+
   // Build the page creation payload
   const pagePayload = {
     parent: {
       type: 'data_source_id',
-      data_source_id: notionDatabaseId,
+      data_source_id: notionDataSourceId,
     },
     properties: {
       'Raw Speech': {
@@ -191,6 +237,11 @@ export default async function handler(req, res) {
       },
       Status: {
         status: { name: status },
+      },
+      Date: {
+        date: {
+          start: capturedAt.iso,
+        },
       },
     },
   };
@@ -213,10 +264,12 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorBody = await response.text();
+      const notionError = parseNotionErrorBody(errorBody);
       console.error('[Hazlo/Vercel] notion-sync failed', {
         clientEntryId,
-        statusCode: response.status,
-        errorHint: errorBody.slice(0, 200), // log safely without leaking full raw details to client
+        notionStatus: response.status,
+        notionErrorCode: notionError.code,
+        notionErrorMessage: notionError.message.slice(0, 500),
       });
       return json(res, 502, { error: 'notion_sync_failed' });
     }

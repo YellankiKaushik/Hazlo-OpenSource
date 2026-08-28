@@ -39,7 +39,7 @@ api/notion-sync.js
 ## Backend
 
 - `api/notion-sync.js`: Vercel Serverless Function for Notion writes.
-- Required server-side env vars: `NOTION_TOKEN`, `NOTION_DATABASE_ID`, `API_SECRET`.
+- Required server-side env vars: `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, `API_SECRET`.
 - Required frontend env var: `VITE_API_SECRET`, which must match `API_SECRET`.
 
 ## Data Model

@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-Hazlo is a voice-first productivity app for capturing tasks from spoken thoughts. It lets a user speak a note, daily plan, or task dump into the browser, turns that speech into text with the browser's native speech-recognition support, extracts likely tasks with local rule-based logic, stores the entry in the browser, and syncs the transcript plus extracted tasks into a connected Notion database.
+Hazlo is an open-source voice-first task capture application. It lets a user speak a note, daily plan, or task dump into the browser, turns that speech into text with the browser's native speech-recognition support, extracts likely tasks with local rule-based logic, stores the entry in the browser, and syncs the transcript plus extracted tasks into a connected Notion data source.
 
 Hazlo is designed as a personal, self-hosted, open-source productivity tool. The current implementation favors a small, understandable system over a large SaaS architecture: React renders the UI, Zustand owns local state and persistence, a Vercel Serverless Function protects the Notion token, and Notion becomes the long-term productivity workspace.
 
@@ -208,7 +208,7 @@ The service sends:
 `api/notion-sync.js` handles `OPTIONS` and `POST`. For `POST`, it validates:
 
 - `X-API-Secret` matches server-side `API_SECRET`.
-- `NOTION_TOKEN` and `NOTION_DATABASE_ID` exist.
+- `NOTION_TOKEN` and `NOTION_DATA_SOURCE_ID` exist.
 - The body is valid JSON or an object.
 - `rawSpeech` is a non-empty string after trimming.
 - `tasks`, if present, is an array of objects with non-empty `text` and optional boolean `completed`.
@@ -218,7 +218,7 @@ The service sends:
 The backend builds a Notion page payload using:
 
 - parent type `data_source_id`
-- `data_source_id: NOTION_DATABASE_ID`
+- `data_source_id: NOTION_DATA_SOURCE_ID`
 - `Raw Speech` title property from the transcript
 - `Status` status property mapped to `Not started`, `In progress`, or `Done`
 - one paragraph child block for the full transcript
@@ -564,7 +564,7 @@ It exists so Hazlo can write to Notion without exposing `NOTION_TOKEN` to the br
 | --- | --- |
 | Secret protection | `X-API-Secret` checked against `API_SECRET`. |
 | Notion auth | `NOTION_TOKEN` used server-side in the `Authorization` header. |
-| Database target | `NOTION_DATABASE_ID` used as the Notion `data_source_id`. |
+| Data source target | `NOTION_DATA_SOURCE_ID` used as the Notion `data_source_id`. |
 | Tasks | Converted into Notion `to_do` blocks. |
 | Errors | Returned safely without exposing Notion token or raw Notion responses to the client. |
 
@@ -602,7 +602,7 @@ Notion page creation:
 {
   parent: {
     type: 'data_source_id',
-    data_source_id: notionDatabaseId
+    data_source_id: notionDataSourceId
   },
   properties: {
     'Raw Speech': {
@@ -680,7 +680,7 @@ Hazlo does not currently create or update Notion properties for due dates, prior
 | Variable | Used By | Required In | Purpose | Safe to commit? |
 | --- | --- | --- | --- | --- |
 | `NOTION_TOKEN` | `api/notion-sync.js` | Vercel/server runtime | Authenticates the serverless function to Notion. | No |
-| `NOTION_DATABASE_ID` | `api/notion-sync.js` | Vercel/server runtime | Tells the backend which Notion database/data source to create pages in. | No for real values |
+| `NOTION_DATA_SOURCE_ID` | `api/notion-sync.js` | Vercel/server runtime | Tells the backend which Notion data source to create pages in. | No for real values |
 | `API_SECRET` | `api/notion-sync.js` | Vercel/server runtime | Server-side expected shared secret for sync requests. | No |
 | `VITE_API_SECRET` | `src/services/notion.ts` | Frontend build/runtime | Sent from frontend as `X-API-Secret`; must match `API_SECRET`. | No for real values |
 | `VITE_API_BASE_URL` | `src/services/notion.ts` | Frontend build/runtime | Optional base URL for calling a separate backend. Empty means same-origin `/api/notion-sync`. | Only placeholder/empty values |
@@ -688,7 +688,7 @@ Hazlo does not currently create or update Notion properties for due dates, prior
 Details:
 
 - `NOTION_TOKEN` must stay server-side. Never expose it in frontend code.
-- `NOTION_DATABASE_ID` identifies where Notion pages are created.
+- `NOTION_DATA_SOURCE_ID` identifies the Notion data source where pages are created.
 - `API_SECRET` protects the backend endpoint from requests that do not know the shared secret.
 - `VITE_API_SECRET` is included in the frontend build and must match `API_SECRET`.
 - Because `VITE_API_SECRET` is visible to browser users, it is not strong user authentication.
@@ -775,9 +775,9 @@ Copy-Item .env.example .env.local
 
 ```env
 NOTION_TOKEN=your_notion_token_here
-NOTION_DATABASE_ID=your_notion_database_id_here
-API_SECRET=your_random_api_secret_here
-VITE_API_SECRET=your_same_random_api_secret_here
+NOTION_DATA_SOURCE_ID=your_notion_data_source_id_here
+API_SECRET=generate_a_random_value
+VITE_API_SECRET=use_the_same_value_as_API_SECRET
 VITE_API_BASE_URL=
 ```
 
@@ -826,7 +826,7 @@ dist
 6. Add environment variables in Vercel Project Settings:
 
 - `NOTION_TOKEN`
-- `NOTION_DATABASE_ID`
+- `NOTION_DATA_SOURCE_ID`
 - `API_SECRET`
 - `VITE_API_SECRET`
 - `VITE_API_BASE_URL` only if needed
@@ -851,7 +851,7 @@ If Notion sync fails, check:
 
 - The database is shared with the Notion integration.
 - `NOTION_TOKEN` is correct.
-- `NOTION_DATABASE_ID` is the correct database/data source ID.
+- `NOTION_DATA_SOURCE_ID` is the correct data source ID.
 - `API_SECRET` and `VITE_API_SECRET` match.
 - The Notion database contains `Raw Speech` and `Status`.
 
@@ -897,7 +897,7 @@ What each command validates:
 | `Sync failed` appears | `saveToNotion` returned a safe failure message. | Click `Retry` after checking configuration or network state. |
 | API secret mismatch | `VITE_API_SECRET` does not match `API_SECRET`. | Set both values to the same secret and redeploy after changing `VITE_API_SECRET`. |
 | Notion database not shared with integration | The integration cannot access the database. | Open the database in Notion and share it with the integration. |
-| Missing env vars in Vercel | Backend cannot read required values. | Add `NOTION_TOKEN`, `NOTION_DATABASE_ID`, and `API_SECRET` in Vercel settings. |
+| Missing env vars in Vercel | Backend cannot read required values. | Add `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, and `API_SECRET` in Vercel settings. |
 | Vercel env vars changed but app was not redeployed | Frontend bundle still has old `VITE_` values. | Redeploy the project after changing any `VITE_` variable. |
 | Localhost cannot call API | Vite dev server does not run Vercel functions by itself. | Use `vercel dev` for local API routes or set `VITE_API_BASE_URL` to a deployed backend. |
 | CORS/preflight issue | Separate frontend origin is not in `ALLOWED_ORIGINS`. | Host frontend/backend same-origin or update the allowed origins in the backend route. |
@@ -951,10 +951,10 @@ Personal setup:
 3. Create your own Notion integration.
 4. Create your own Notion database.
 5. Share that database with your integration.
-6. Copy your own integration token and database ID.
+6. Copy your own integration token and data source ID.
 7. Add your own env vars in Vercel:
    - `NOTION_TOKEN`
-   - `NOTION_DATABASE_ID`
+   - `NOTION_DATA_SOURCE_ID`
    - `API_SECRET`
    - `VITE_API_SECRET`
    - optional `VITE_API_BASE_URL`

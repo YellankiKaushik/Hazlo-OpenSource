@@ -20,24 +20,24 @@ export function Home() {
     }, [performMidnightRollover]);
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
+        <div className="app-shell">
             <Header />
 
-            <main className="max-w-2xl mx-auto px-4 py-6">
-                {/* Pending tasks banner */}
+            <main className="app-container pb-[24rem] pt-5 sm:pb-[23rem] sm:pt-6">
                 {incompleteTasks.length > 0 && (
-                    <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                        <span className="font-medium text-amber-800">
+                    <div
+                        className="mb-5 rounded-xl border px-4 py-3 shadow-sm"
+                        style={{ background: 'var(--color-warning-bg)', borderColor: 'var(--color-border)', color: 'var(--color-warning-text)' }}
+                    >
+                        <span className="text-sm font-medium">
                             {incompleteTasks.length} pending task{incompleteTasks.length > 1 ? 's' : ''}
                         </span>
                     </div>
                 )}
 
-                {/* Entry list */}
                 <EntryList groups={groupedEntries} />
             </main>
 
-            {/* Voice input fixed at bottom */}
             <VoiceInput />
         </div>
     );

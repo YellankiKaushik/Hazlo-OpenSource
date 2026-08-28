@@ -5,7 +5,7 @@ Use this checklist before or after deploying Hazlo to Vercel.
 ## Vercel Environment
 
 - [ ] `NOTION_TOKEN` is set in Vercel.
-- [ ] `NOTION_DATABASE_ID` is set in Vercel.
+- [ ] `NOTION_DATA_SOURCE_ID` is set in Vercel.
 - [ ] `API_SECRET` is set in Vercel.
 - [ ] `VITE_API_SECRET` is set and matches `API_SECRET`.
 - [ ] `VITE_API_BASE_URL` is empty for same-origin production deploys, or points to the intended backend for local testing.

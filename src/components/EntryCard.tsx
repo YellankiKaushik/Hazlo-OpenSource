@@ -14,15 +14,15 @@ function getSyncLabel(status: SyncStatus): string {
 }
 
 function getSyncClassName(status: SyncStatus): string {
-    if (status === 'pending') return 'text-amber-700 bg-amber-50';
-    if (status === 'failed') return 'text-red-700 bg-red-50';
-    return 'text-green-700 bg-green-50';
+    if (status === 'pending') return 'sync-pill sync-pill--pending';
+    if (status === 'failed') return 'sync-pill sync-pill--failed';
+    return 'sync-pill sync-pill--synced';
 }
 
 function getSyncDotClassName(status: SyncStatus): string {
-    if (status === 'pending') return 'bg-amber-500';
-    if (status === 'failed') return 'bg-red-500';
-    return 'bg-green-500';
+    if (status === 'pending') return 'sync-dot sync-dot--pending';
+    if (status === 'failed') return 'sync-dot sync-dot--failed';
+    return 'sync-dot sync-dot--synced';
 }
 
 export function EntryCard({ entry }: EntryCardProps) {
@@ -31,57 +31,65 @@ export function EntryCard({ entry }: EntryCardProps) {
     const syncStatus = entry.syncStatus ?? 'synced';
 
     return (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex-1">
-                    {/* Timestamp */}
-                    <span className="text-gray-400 text-xs flex items-center gap-1 mb-2">
-                        <Clock className="w-3 h-3" />
+        <article
+            className="rounded-2xl border p-4 transition-shadow duration-200 sm:p-5"
+            style={{ background: 'var(--color-card)', borderColor: 'var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                         {entry.time}
-                    </span>
+                        </span>
 
-                    <div className="flex items-center gap-2 mb-3">
                         <span
-                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium ${getSyncClassName(syncStatus)}`}
+                            className={getSyncClassName(syncStatus)}
                             title={syncStatus === 'failed' ? entry.syncError : undefined}
                         >
-                            <span className={`h-1.5 w-1.5 rounded-full ${getSyncDotClassName(syncStatus)}`} />
+                            <span className={getSyncDotClassName(syncStatus)} />
                             {getSyncLabel(syncStatus)}
                         </span>
 
                         {syncStatus === 'failed' && (
                             <button
+                                type="button"
                                 onClick={() => retrySyncEntry(entry.id)}
-                                className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                                className="retry-button inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-xs font-semibold transition-colors"
+                                aria-label="Retry Notion sync"
                                 title="Retry Notion sync"
                             >
-                                <RefreshCw className="w-3 h-3" />
+                                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                                 Retry
                             </button>
                         )}
                     </div>
 
-                    {/* Raw speech transcript */}
-                    <p className="text-gray-800 text-base leading-relaxed">
+                    <p className="overflow-wrap-anywhere text-[0.98rem] leading-7" style={{ color: 'var(--color-text-primary)' }}>
                         {entry.rawText}
                     </p>
+
+                    {syncStatus === 'failed' && entry.syncError && (
+                        <p className="mt-2 text-sm leading-6" style={{ color: 'var(--color-error-text)' }}>
+                            {entry.syncError}
+                        </p>
+                    )}
                 </div>
 
-                {/* Delete button */}
                 <button
+                    type="button"
                     onClick={() => deleteEntry(entry.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="destructive-icon-button flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl transition-colors"
+                    aria-label="Delete entry"
                     title="Delete entry"
                 >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
             </div>
 
-            {/* Extracted tasks */}
             {entry.tasks.length > 0 && (
-                <div className="space-y-2 mt-4 pt-4 border-t border-gray-100">
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <div className="mt-4 space-y-2 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
+                    <span className="text-xs font-semibold uppercase" style={{ color: 'var(--color-text-muted)' }}>
                         Tasks ({entry.tasks.filter(t => t.completed).length}/{entry.tasks.length})
                     </span>
                     <div className="space-y-2">
@@ -95,7 +103,7 @@ export function EntryCard({ entry }: EntryCardProps) {
                     </div>
                 </div>
             )}
-        </div>
+        </article>
     );
 }
 

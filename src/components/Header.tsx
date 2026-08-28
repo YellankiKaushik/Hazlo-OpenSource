@@ -1,24 +1,26 @@
 import { Zap } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Header() {
     return (
-        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-100">
-            <div className="max-w-2xl mx-auto px-4 py-4">
-                <div className="flex items-center justify-between">
-                    {/* Logo */}
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center">
-                            <Zap className="w-5 h-5 text-white" />
+        <header className="sticky top-0 z-20 border-b backdrop-blur-md" style={{ background: 'var(--color-header-bg)', borderColor: 'var(--color-border)' }}>
+            <div className="app-container py-3 sm:py-4">
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm" style={{ background: 'var(--color-accent)', color: 'var(--color-accent-text)' }}>
+                            <Zap className="h-5 w-5" aria-hidden="true" />
                         </div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
-                            Hazlo
-                        </h1>
+                        <div className="min-w-0">
+                            <h1 className="truncate text-lg font-semibold sm:text-xl" style={{ color: 'var(--color-text-primary)' }}>
+                                Hazlo by Kaushik
+                            </h1>
+                            <p className="hidden text-sm leading-tight sm:block" style={{ color: 'var(--color-text-muted)' }}>
+                                Think it. Say it. Do it.
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Tagline */}
-                    <span className="text-sm text-gray-500 hidden sm:block">
-                        Think it. Say it. Do it.
-                    </span>
+                    <ThemeToggle />
                 </div>
             </div>
         </header>

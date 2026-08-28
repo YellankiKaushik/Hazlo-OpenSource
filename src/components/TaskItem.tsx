@@ -14,48 +14,60 @@ export function TaskItem({ task, entryId }: TaskItemProps) {
     return (
         <div
             className={`
-        flex items-center gap-3 p-3 rounded-xl transition-all duration-200
+        flex items-start gap-3 rounded-xl border p-3 transition-colors duration-200
         ${task.completed
-                    ? 'bg-gray-50 opacity-60'
-                    : 'bg-white border border-gray-100 hover:border-gray-200'
+                    ? 'opacity-70'
+                    : ''
                 }
       `}
+            style={{
+                background: task.completed ? 'var(--color-subtle)' : 'var(--color-surface-elevated)',
+                borderColor: 'var(--color-border)',
+            }}
         >
-            {/* Checkbox */}
             <button
+                type="button"
                 onClick={() => toggleTaskCompletion(entryId, task.id)}
                 className={`
-          flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center
-          transition-all duration-200
+          task-check-button flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border-2
+          transition-colors duration-200
           ${task.completed
-                        ? 'bg-green-500 text-white'
-                        : 'border-2 border-gray-300 hover:border-green-500 hover:bg-green-50'
+                        ? ''
+                        : ''
                     }
         `}
+                style={{
+                    background: task.completed ? 'var(--color-success-dot)' : 'transparent',
+                    borderColor: task.completed ? 'var(--color-success-dot)' : 'var(--color-border-strong)',
+                    color: 'white',
+                }}
+                aria-label={task.completed ? 'Mark task incomplete' : 'Mark task complete'}
+                aria-pressed={task.completed}
             >
-                {task.completed && <Check className="w-3 h-3" />}
+                {task.completed && <Check className="h-3 w-3" aria-hidden="true" />}
             </button>
 
-            {/* Task text */}
             <span
                 className={`
-          flex-1 text-sm leading-relaxed
+          min-w-0 flex-1 overflow-wrap-anywhere text-sm leading-6
           ${task.completed
-                        ? 'text-gray-400 line-through'
-                        : 'text-gray-800'
+                        ? 'line-through'
+                        : ''
                     }
         `}
+                style={{ color: task.completed ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}
             >
                 {task.text}
             </span>
 
-            {/* Delete button */}
             <button
+                type="button"
                 onClick={() => deleteTask(entryId, task.id)}
-                className="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                className="destructive-icon-button flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-xl transition-colors"
+                aria-label="Delete task"
                 title="Delete task"
             >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
             </button>
         </div>
     );

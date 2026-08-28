@@ -3,6 +3,7 @@ import { Entry } from '../types';
 interface NotionSyncPayload {
     rawSpeech: string;
     status: 'Not started' | 'In progress' | 'Done';
+    capturedAt: string;
     clientEntryId?: string;
     tasks?: { text: string; completed: boolean }[];
 }
@@ -94,6 +95,7 @@ export async function saveToNotion(entry: Entry): Promise<NotionSyncResult> {
     const payload: NotionSyncPayload = {
         rawSpeech: entry.rawText,
         status: 'Not started',
+        capturedAt: entry.createdAt,
         clientEntryId: entry.id,
         tasks: entry.tasks.map(t => ({ text: t.text, completed: t.completed })),
     };
@@ -125,6 +127,7 @@ export async function testNotionConnection(): Promise<boolean> {
             body: JSON.stringify({
                 rawSpeech: '[Hazlo connectivity check]',
                 status: 'Not started',
+                capturedAt: new Date().toISOString(),
                 clientEntryId: 'connectivity-check',
             } satisfies NotionSyncPayload),
         });
