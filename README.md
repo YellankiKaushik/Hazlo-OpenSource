@@ -1,6 +1,8 @@
-# Hazlo
+# Hazlo by Kaushik
 
 Hazlo is an open-source, voice-first task capture app that turns spoken or typed thoughts into local task entries and syncs them to your own Notion workspace through a small Vercel backend.
+
+Created and maintained by [Kaushik (@YellankiKaushik)](https://github.com/YellankiKaushik).
 
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=111)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=fff)](https://vite.dev/)
@@ -11,6 +13,12 @@ Hazlo is an open-source, voice-first task capture app that turns spoken or typed
 ## Live Demo
 
 [https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app/)
+
+## Preview
+
+![Hazlo by Kaushik - voice-first task capture application](docs/screenshots/hazlo-overview.png)
+
+Current Hazlo interface with voice/manual capture, task extraction, sync status, and theme controls.
 
 ## What Hazlo Does
 
@@ -37,10 +45,6 @@ The app keeps the raw thought as the source text, extracts likely tasks locally,
 - Responsive UI for desktop and mobile.
 - PWA metadata, manifest, and install icons.
 - Vercel backend route for protecting the Notion token from the browser bundle.
-
-## Screenshots
-
-No tracked screenshots are included yet. Add future screenshots to a tracked folder such as `docs/screenshots/`, then place them here with short captions showing the main capture screen, manual entry fallback, theme states, and Notion result.
 
 ## How It Works
 
@@ -371,6 +375,14 @@ Vercel function logs are the main place to diagnose backend problems. In Vercel,
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Author
+
+Hazlo was created and is maintained by **Kaushik** ([@YellankiKaushik](https://github.com/YellankiKaushik)).
+
+- GitHub: [https://github.com/YellankiKaushik](https://github.com/YellankiKaushik)
+- Repository: [https://github.com/YellankiKaushik/Hazlo-OpenSource](https://github.com/YellankiKaushik/Hazlo-OpenSource)
+- Live application: [https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app)
 
 ## License
 

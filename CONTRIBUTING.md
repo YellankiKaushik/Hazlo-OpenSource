@@ -1,6 +1,8 @@
 # Contributing to Hazlo
 
-Thanks for helping improve Hazlo. Keep contributions focused, testable, and safe for people who self-host the app with their own Notion workspace.
+Hazlo is maintained by Kaushik ([@YellankiKaushik](https://github.com/YellankiKaushik)). Contributions are welcome through pull requests.
+
+Keep contributions focused, testable, and safe for people who self-host the app with their own Notion workspace.
 
 ## Workflow
 
@@ -87,3 +89,7 @@ If your change modifies this contract, update tests and every setup/deployment d
 - Keep user-facing behavior stable unless the pull request is intentionally changing it.
 - Add or update tests when changing shared behavior, sync logic, speech handling, theme logic, or task extraction.
 - Keep documentation beginner-friendly when setup steps change.
+
+## License
+
+By contributing, you agree that your contribution may be distributed under this repository's MIT License. This project does not use a contributor license agreement.

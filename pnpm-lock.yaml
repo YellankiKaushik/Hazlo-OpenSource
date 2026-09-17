@@ -33,9 +33,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.7.0(vite@7.3.3(@types/node@24.12.4)(jiti@1.21.7))
-      '@youware/vite-plugin-react':
-        specifier: ^1.0.3
-        version: 1.0.3(vite@7.3.3(@types/node@24.12.4)(jiti@1.21.7))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.5.0(postcss@8.5.15)
@@ -541,11 +538,6 @@ packages:
 
   '@vitest/utils@4.1.9':
     resolution: {integrity: sha512-A51o8ymO5PpqlWNnBP9ZHPXDIpuMtTLlGSjN7la4US+LJzoUMyhwjA5QXlm39JexgwHKW4Xjs8Z2d3dLCXOeuA==}
-
-  '@youware/vite-plugin-react@1.0.3':
-    resolution: {integrity: sha512-7TzCuhvwWn2nfYpfUW+5E1QL31vKz91J3DqW85V4RmocDX86W0K2g+IiyPqBPyKRzTtlqQcprVux5L2ZQ8FFDw==}
-    peerDependencies:
-      vite: ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
 
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
@@ -1504,16 +1496,6 @@ snapshots:
       '@vitest/pretty-format': 4.1.9
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
-
-  '@youware/vite-plugin-react@1.0.3(vite@7.3.3(@types/node@24.12.4)(jiti@1.21.7))':
-    dependencies:
-      '@babel/generator': 7.29.1
-      '@babel/parser': 7.29.3
-      '@babel/traverse': 7.29.0
-      '@babel/types': 7.29.0
-      vite: 7.3.3(@types/node@24.12.4)(jiti@1.21.7)
-    transitivePeerDependencies:
-      - supports-color
 
   any-promise@1.3.0: {}
 

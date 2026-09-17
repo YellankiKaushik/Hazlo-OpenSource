@@ -2,6 +2,8 @@
 
 Hazlo is a lightweight voice-first task capture app. It helps a user capture a thought quickly, extract likely tasks, keep the entry in the browser, and sync it to the user's own Notion workspace.
 
+Hazlo was created and is maintained by Kaushik (YellankiKaushik).
+
 ## Current Product Shape
 
 Hazlo currently supports:
