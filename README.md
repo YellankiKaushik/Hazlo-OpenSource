@@ -14,6 +14,12 @@ Created and maintained by [Kaushik (@YellankiKaushik)](https://github.com/Yellan
 
 [https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app/)
 
+## Watch the Hazlo Demo
+
+[▶ **Watch the 1-minute Hazlo product video**](docs/media/hazlo-promotional-video.mp4)
+
+A short walkthrough of voice or manual capture, local task handling, and Notion synchronization.
+
 ## Preview
 
 ![Hazlo by Kaushik - voice-first task capture application](docs/screenshots/hazlo-overview.png)
