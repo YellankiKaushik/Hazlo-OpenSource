@@ -1,0 +1,43 @@
+1
+00:00:00,150 --> 00:00:01,400
+Your ideas move fast.
+
+2
+00:00:01,500 --> 00:00:02,950
+Your task capture should too.
+
+3
+00:00:03,150 --> 00:00:06,850
+Meet Hazlo. Voice-first task capture.
+
+4
+00:00:07,150 --> 00:00:08,450
+Speak it.
+
+5
+00:00:08,500 --> 00:00:11,850
+Or type it.
+
+6
+00:00:12,150 --> 00:00:16,850
+Thoughts become tasks. Local, rule-based extraction.
+
+7
+00:00:17,150 --> 00:00:19,850
+Capture locally. Sync to Notion.
+
+8
+00:00:20,000 --> 00:00:21,850
+Local entries stay available when sync fails.
+
+9
+00:00:22,100 --> 00:00:25,850
+Your setup. Your workspace. Fork, connect, configure, deploy.
+
+10
+00:00:26,100 --> 00:00:28,250
+Build your own Hazlo.
+
+11
+00:00:28,500 --> 00:00:31,900
+Open source. Forkable. Yours. Built by Kaushik.

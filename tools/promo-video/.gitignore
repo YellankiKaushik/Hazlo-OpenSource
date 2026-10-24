@@ -1,0 +1,12 @@
+node_modules/
+.browser-profile/
+cache/
+renders/
+renders-v2/
+*.log
+assets/recordings/*.webm
+assets/recordings/frames/
+assets/audio/*.wav
+assets/v2/raw/
+assets/v2/frames/
+assets/v2/audio/*.wav

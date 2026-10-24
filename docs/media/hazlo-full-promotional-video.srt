@@ -1,0 +1,79 @@
+1
+00:00:00,500 --> 00:00:03,600
+Great ideas don't wait.
+
+2
+00:00:04,000 --> 00:00:07,800
+But capturing them takes time.
+
+3
+00:00:08,400 --> 00:00:12,300
+Meet Hazlo. Voice-first task capture.
+
+4
+00:00:12,500 --> 00:00:16,800
+A real, open-source app. Built by Kaushik.
+
+5
+00:00:17,400 --> 00:00:21,500
+Speak your thoughts with supported browser speech recognition.
+
+6
+00:00:21,800 --> 00:00:25,400
+Or choose Type instead.
+
+7
+00:00:25,600 --> 00:00:29,800
+One thought. One simple capture flow.
+
+8
+00:00:30,500 --> 00:00:35,000
+Turn simple phrases into actionable tasks.
+
+9
+00:00:35,300 --> 00:00:40,700
+Task extraction runs locally, using rules.
+
+10
+00:00:41,400 --> 00:00:46,700
+Save an entry in your browser first.
+
+11
+00:00:47,000 --> 00:00:50,800
+A Vercel Function creates a page in your Notion workspace.
+
+12
+00:00:51,000 --> 00:00:54,800
+If sync fails, the local entry stays. Retry when ready.
+
+13
+00:00:55,400 --> 00:00:59,500
+A small stack with a practical workflow.
+
+14
+00:00:59,800 --> 00:01:04,700
+React, Vite, TypeScript, Zustand, Web Speech, Vercel, and Notion.
+
+15
+00:01:05,400 --> 00:01:09,500
+Open source. Your workspace. Your setup.
+
+16
+00:01:09,800 --> 00:01:14,200
+Fork the repository. Connect your own Notion data source.
+
+17
+00:01:14,500 --> 00:01:18,800
+Configure Vercel, then deploy your own Hazlo.
+
+18
+00:01:19,500 --> 00:01:23,400
+Capture first. Organize later.
+
+19
+00:01:23,700 --> 00:01:27,800
+Built for the way thoughts happen.
+
+20
+00:01:28,400 --> 00:01:34,800
+Try Hazlo. Open source. Forkable. Yours.

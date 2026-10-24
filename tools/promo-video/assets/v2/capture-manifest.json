@@ -1,0 +1,31 @@
+{
+  "source": "https://hazlo-opensource.vercel.app/",
+  "status": 200,
+  "events": {
+    "manualOpen": 1.584,
+    "manualFull": 3.516,
+    "saveClick": 3.936,
+    "tasksVisible": 3.972
+  },
+  "transcript": "Finish the landing page and review the deployment",
+  "terminalFullStopOmittedForCurrentExtractor": true,
+  "extractedTasks": [
+    "Finish the landing page",
+    "review the deployment"
+  ],
+  "realCheckboxInteraction": true,
+  "realManualEntry": true,
+  "persistenceVerified": true,
+  "syncRequestsIntercepted": 1,
+  "productionPostsSent": 0,
+  "successfulNotionWriteClaimed": false,
+  "browserProfile": "fresh isolated context",
+  "microphone": "not recorded; waveform is separately labelled illustrative",
+  "clip": {
+    "start": 1.4340000000000002,
+    "duration": 2.8379999999999996,
+    "manualFull": 2.082,
+    "save": 2.502,
+    "tasks": 2.538
+  }
+}

@@ -1,0 +1,35 @@
+export const duration = 95;
+export const fps = 30;
+export const scenes = [
+  { start: 0, end: 8, name: 'The fleeting thought', chapter: 'THE MOMENT' },
+  { start: 8, end: 17, name: 'Meet Hazlo', chapter: 'MEET HAZLO' },
+  { start: 17, end: 30, name: 'Speak or type', chapter: 'CAPTURE' },
+  { start: 30, end: 41, name: 'Thoughts into tasks', chapter: 'EXTRACT' },
+  { start: 41, end: 55, name: 'Local first, Notion next', chapter: 'KEEP THE MOMENT' },
+  { start: 55, end: 65, name: 'A small, practical stack', chapter: 'UNDER THE HOOD' },
+  { start: 65, end: 79, name: 'Fork it. Make it yours.', chapter: 'OPEN SOURCE' },
+  { start: 79, end: 88, name: 'Capture first', chapter: 'YOUR NEXT THOUGHT' },
+  { start: 88, end: 95, name: 'Try Hazlo', chapter: 'BUILT BY KAUSHIK' },
+];
+export const captions = [
+  [0.5, 3.6, "Great ideas don't wait."],
+  [4, 7.8, 'But capturing them takes time.'],
+  [8.4, 12.3, 'Meet Hazlo. Voice-first task capture.'],
+  [12.5, 16.8, 'A real, open-source app. Built by Kaushik.'],
+  [17.4, 21.5, 'Speak your thoughts with supported browser speech recognition.'],
+  [21.8, 25.4, 'Or choose Type instead.'],
+  [25.6, 29.8, 'One thought. One simple capture flow.'],
+  [30.5, 35, 'Turn simple phrases into actionable tasks.'],
+  [35.3, 40.7, 'Task extraction runs locally, using rules.'],
+  [41.4, 46.7, 'Save an entry in your browser first.'],
+  [47, 50.8, 'A Vercel Function creates a page in your Notion workspace.'],
+  [51, 54.8, 'If sync fails, the local entry stays. Retry when ready.'],
+  [55.4, 59.5, 'A small stack with a practical workflow.'],
+  [59.8, 64.7, 'React, Vite, TypeScript, Zustand, Web Speech, Vercel, and Notion.'],
+  [65.4, 69.5, 'Open source. Your workspace. Your setup.'],
+  [69.8, 74.2, 'Fork the repository. Connect your own Notion data source.'],
+  [74.5, 78.8, 'Configure Vercel, then deploy your own Hazlo.'],
+  [79.5, 83.4, 'Capture first. Organize later.'],
+  [83.7, 87.8, 'Built for the way thoughts happen.'],
+  [88.4, 94.8, 'Try Hazlo. Open source. Forkable. Yours.'],
+];

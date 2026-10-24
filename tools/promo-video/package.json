@@ -1,0 +1,21 @@
+{
+  "name": "hazlo-launch-production",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Deterministic Canvas/Chromium motion film for Hazlo; isolated from the application.",
+  "scripts": {
+    "capture": "node scripts/capture.mjs",
+    "audio": "node scripts/audio.mjs",
+    "preview": "node scripts/render.mjs --preview",
+    "render": "node scripts/render.mjs",
+    "verify": "node scripts/verify.mjs && node scripts/contact-sheet.mjs",
+    "teaser": "node scripts/teaser.mjs",
+    "v2:capture": "node v2/capture.mjs",
+    "v2:audio": "node v2/audio.mjs",
+    "v2:preview": "node v2/render.mjs --preview",
+    "v2:render": "node v2/render.mjs",
+    "v2:verify": "node v2/verify.mjs"
+  },
+  "dependencies": { "playwright": "1.62.1", "sharp": "0.35.5" }
+}

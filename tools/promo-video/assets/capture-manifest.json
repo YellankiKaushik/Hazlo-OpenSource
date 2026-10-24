@@ -1,0 +1,21 @@
+{
+  "capturedFrom": "https://hazlo-opensource.vercel.app/",
+  "httpStatus": 200,
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "screenshotScale": 1.5,
+  "fictionalTranscript": "Finish the landing page and review the Vercel deployment",
+  "realManualEntry": true,
+  "extractedTasks": [
+    "Finish the landing page",
+    "review the Vercel deployment"
+  ],
+  "persistenceVerifiedAfterReload": true,
+  "syncRequestsIntercepted": 1,
+  "actualNotionRequestsSent": 0,
+  "microphoneRecorded": false,
+  "editorialNote": "Terminal full stop omitted to match the current deterministic extractor and produce two tasks. Application code is unchanged.",
+  "syncResult": "Intentionally blocked in fresh browser; failure/retry state is authentic. Successful sync visuals are separately labelled illustrative."
+}

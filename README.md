@@ -14,11 +14,27 @@ Created and maintained by [Kaushik (@YellankiKaushik)](https://github.com/Yellan
 
 [https://hazlo-opensource.vercel.app](https://hazlo-opensource.vercel.app/)
 
-## Watch the Hazlo Demo
+## Watch Hazlo in Action
 
-[▶ **Watch the 1-minute Hazlo product video**](docs/media/hazlo-promotional-video.mp4)
+See how Hazlo turns spoken or typed thoughts into organized tasks, saves entries locally, and syncs them to your own Notion workspace.
 
-A short walkthrough of voice or manual capture, local task handling, and Notion synchronization.
+### Hazlo — 32-Second Product Teaser
+
+A quick look at Hazlo's voice-first capture workflow, task extraction, Notion sync, and open-source setup.
+
+<a href="docs/media/hazlo-launch-teaser-v2.mp4"><img src="docs/media/hazlo-launch-teaser-v2-thumbnail.png" width="560" alt="Watch the 32-second Hazlo product teaser"></a>
+
+**0:32** · [View video on GitHub](docs/media/hazlo-launch-teaser-v2.mp4) · [Direct MP4 — open/download](https://raw.githubusercontent.com/YellankiKaushik/Hazlo-OpenSource/main/docs/media/hazlo-launch-teaser-v2.mp4) · [Captions](docs/media/hazlo-launch-teaser-v2.srt)
+
+### Hazlo — Full 95-Second Product Overview
+
+A more detailed walkthrough of the Hazlo application, its workflow, technical foundation, and how to run your own version.
+
+<a href="docs/media/hazlo-full-promotional-video.mp4"><img src="docs/media/hazlo-full-promotional-thumbnail.png" width="560" alt="Watch the full 95-second Hazlo product overview"></a>
+
+**1:35** · [View video on GitHub](docs/media/hazlo-full-promotional-video.mp4) · [Direct MP4 — open/download](https://raw.githubusercontent.com/YellankiKaushik/Hazlo-OpenSource/main/docs/media/hazlo-full-promotional-video.mp4) · [Captions](docs/media/hazlo-full-promotional-video.srt)
+
+GitHub may show a file/download page rather than an inline player. Use **Direct MP4** to open or download the video for playback; no repository clone is needed. See the [media guide](docs/media/README.md) for sharing links, source code, and licensing. The [earlier promotional video](docs/media/hazlo-promotional-video.mp4) remains available.
 
 ## Preview
 
