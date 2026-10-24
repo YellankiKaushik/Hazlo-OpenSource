@@ -6,7 +6,7 @@ The separately redesigned 32-second teaser is documented in [v2/README.md](v2/RE
 
 The renderer uses a deterministic Canvas 2D composition in Chromium, Playwright for real application capture and frame delivery, and FFmpeg for H.264/AAC encoding. It renders each of 2,850 frames at an explicit timeline time. Animated masks, typography, scene wipes, parallax, waveforms, task cards, data pulses and UI camera moves are code-driven; this is not a slideshow export.
 
-The tooling is isolated from the Hazlo application. No app package or lockfile changes are needed.
+The tooling is isolated from the Hazlo application. Its own `pnpm-workspace.yaml` makes this folder an independent pnpm workspace, so installation and render commands use the video package rather than inheriting Hazlo's root workspace. No app package or lockfile changes are needed.
 
 ## Requirements
 
