@@ -1,5 +1,7 @@
 # Security release readiness — Phase 2
 
+> Phase 3 follow-up (2026-10-28): the sections below retain Phase 2 evidence. The current decision, provider-operation ledger, exact failed gates and owner resolution steps are in [SECURITY_FINAL_RELEASE_REPORT.md](SECURITY_FINAL_RELEASE_REPORT.md). Fresh Phase 3 checks passed with 146 tests / 9 files. The ignored local project link has been safely corrected and both new Preview-only flags were added as false. Main/Production remain at e6d10b040874cf135d3aaa66353c9b9ba3b0785a; PR creation still fails with connector 403. **BLOCKED — RELEASE GATES NOT SATISFIED** because review, active endpoint throttling and Production settings are incomplete. Historical statements that the local link is untouched or all new flags are absent no longer describe the Phase 3 state.
+
 Audit date: **2026-10-28**, Asia/Calcutta. This is an independent follow-up to the [Phase 1 audit](SECURITY_AUDIT_REPORT.md). Results below were re-executed or inspected; prior claims were not accepted solely from the earlier report.
 
 ## A. Executive decision

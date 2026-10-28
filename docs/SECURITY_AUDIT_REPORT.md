@@ -1,5 +1,7 @@
 # Hazlo security audit report
 
+> Phase 3 update (2026-10-28): [SECURITY_FINAL_RELEASE_REPORT.md](SECURITY_FINAL_RELEASE_REPORT.md) is the current release decision and supersedes the historical operational status below. Fresh checks passed (146 tests / 9 files, audits, types, build, browser/render and actual protected Preview). The wrong ignored local Vercel link is now corrected with a backup, and both Preview sync flags are explicitly false. PR creation still returns 403; provider endpoint enforcement and Production migration remain incomplete. **BLOCKED — RELEASE GATES NOT SATISFIED.** No main merge or Production change occurred.
+
 > Phase 2 update (2026-10-28): the original Phase 1 evidence below is retained as a historical snapshot. The current independent verification, additional fixes, real Vercel Preview results, environment/firewall release gates and disclosed CLI incident/approved cleanup are in [SECURITY_RELEASE_READINESS.md](SECURITY_RELEASE_READINESS.md). Corrected code was verified at **6cf0b173e86fc03aa1cb650271386968acc7af79** with **146 tests passing**; the full branch comparison is now 45 paths after the readiness report. Do not interpret Phase 1 provider-access limitations or 138-test count as the latest Phase 2 results.
 
 ## A. Executive summary
