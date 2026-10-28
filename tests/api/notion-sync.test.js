@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHandler, LIMITS } from './notion-sync.js';
+import { createHandler, LIMITS } from '../../api/notion-sync.js';
 
 const SOURCE = '11111111-1111-4111-8111-111111111111';
 const PAGE = '22222222-2222-4222-8222-222222222222';
@@ -37,6 +37,7 @@ describe('Notion API security and contract', () => {
     const [url, options] = vi.mocked(fetch).mock.calls[0];
     expect(url).toBe('https://api.notion.com/v1/pages');
     expect(options.redirect).toBe('error');
+    expect(options.headers['Notion-Version']).toBe('2025-09-03');
     expect(options.signal).toBeInstanceOf(AbortSignal);
     const page = JSON.parse(options.body);
     expect(page.parent).toEqual({ type: 'data_source_id', data_source_id: SOURCE });

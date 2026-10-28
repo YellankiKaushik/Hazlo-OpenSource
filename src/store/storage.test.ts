@@ -55,4 +55,27 @@ describe('defensive browser persistence', () => {
         expect(safeStorage(notify).getItem('hazlo-storage')).toBeNull();
         await Promise.resolve(); expect(notify).toHaveBeenCalledTimes(1);
     });
+    it('does not overwrite a newer note saved by another tab', async () => {
+        let raw = envelope([entry()]);
+        const notify = vi.fn();
+        const setItem = vi.fn((_: string, value: string) => { raw = value; });
+        vi.stubGlobal('localStorage', { getItem: () => raw, setItem });
+        const storage = safeStorage(notify);
+        storage.getItem('hazlo-storage');
+        const newer = envelope([entry(), { ...entry(), id: 'another-tab', rawText: 'Do not lose this note' }]);
+        raw = newer;
+        storage.setItem('hazlo-storage', envelope([entry()]));
+        expect(raw).toBe(newer);
+        expect(setItem).not.toHaveBeenCalled();
+        await Promise.resolve(); expect(notify).toHaveBeenCalledWith(expect.stringContaining('another tab'));
+    });
+    it.each([
+        { clientEntryId: 'other-entry' },
+        { capturedAt: '2026-06-18T00:00:00Z' },
+        { rawSpeech: 'unrelated transcript' },
+    ])('rejects a retry snapshot with a mismatched identity/time/transcript (%j)', extra => {
+        const old = { ...entry(), syncPayload: { clientEntryId: entry().id, capturedAt: entry().createdAt,
+            rawSpeech: entry().rawText, status: 'Not started', tasks: [], ...extra } };
+        expect(isStoredEntry(old)).toBe(false);
+    });
 });

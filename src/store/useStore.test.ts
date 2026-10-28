@@ -39,6 +39,8 @@ describe('Hazlo store entry creation', () => {
         saveToNotionMock.mockResolvedValue({ ok: true });
 
         const { useHazloStore } = await import('./useStore');
+        // Each test replaces the entire browser storage; rehydrate before editing it.
+        await useHazloStore.persist.rehydrate();
         useHazloStore.setState({
             entries: [],
             lastRolloverDate: null,

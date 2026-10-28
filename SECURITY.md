@@ -43,6 +43,8 @@ Notes live unencrypted under `hazlo-storage` in localStorage. Same-origin JavaSc
 
 Hydration validates the stored envelope and copies data fields only. Corrupt/incompatible storage is left untouched and further writes are blocked for that tab to prevent overwriting original notes. A visible warning explains that new edits are temporary. Back up the original storage before repairing it; do not automatically clear site data. Quota/blocked storage also produces a visible warning. No destructive storage migration or cosmetic encryption is used.
 
+Retry snapshots must match their entry's identifier, original timestamp and transcript. Before each persistence write, the adapter checks whether another tab changed the stored value; if so it preserves the newer storage and warns that this tab's edits are temporary. This is best-effort stale-write detection, not transactional multi-tab merging. Back up temporary changes before reloading and prefer one active editing tab.
+
 ## HTTP policy
 
 Vercel responses use CSP with same-origin scripts/connections, no plugins, no framing and no form submissions to other origins; nosniff; DENY framing; no-referrer; one-year HSTS; microphone restricted to self; camera/geolocation/payment/USB disabled. React inline styles require `style-src 'unsafe-inline'`; scripts do not. The pre-paint theme initializer is a same-origin file, preserving the selected theme without inline script allowances.

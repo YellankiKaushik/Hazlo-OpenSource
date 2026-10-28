@@ -141,6 +141,20 @@ try {
     assert.equal(await recovery.evaluate(() => localStorage.getItem('hazlo-storage')), '{corrupt retained');
     await corrupt.close();
     passed.push('corrupt storage remains unchanged during temporary in-tab capture');
+    const tabs = await browser.newContext();
+    const tabA = await tabs.newPage(), tabB = await tabs.newPage();
+    await tabA.goto(base); await tabB.goto(base);
+    await tabB.getByRole('button', { name: 'Type instead', exact: true }).click();
+    await tabB.getByLabel('Type instead', { exact: true }).fill('Newer note from another tab');
+    await tabB.getByRole('button', { name: 'Save entry', exact: true }).click();
+    const newer = await tabB.evaluate(() => localStorage.getItem('hazlo-storage'));
+    await tabA.getByRole('button', { name: 'Type instead', exact: true }).click();
+    await tabA.getByLabel('Type instead', { exact: true }).fill('Temporary older-tab edit');
+    await tabA.getByRole('button', { name: 'Save entry', exact: true }).click();
+    await tabA.getByRole('alert').filter({ hasText: 'another tab' }).waitFor();
+    assert.equal(await tabA.evaluate(() => localStorage.getItem('hazlo-storage')), newer);
+    await tabs.close();
+    passed.push('two-tab regression: stale tab warns and cannot overwrite the newer stored note');
   }
   const csp = await page.evaluate(() => window.__cspErrors || []);
   assert.deepEqual(csp, []); assert.deepEqual(errors, []);

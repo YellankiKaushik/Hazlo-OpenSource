@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe('security configuration regression', () => {
+    it('keeps test runner files outside the deployable Vercel api directory', () => {
+        expect(readdirSync(resolve(process.cwd(), 'api')).filter(name => /\.(?:test|spec)\.[cm]?[jt]s$/.test(name))).toEqual([]);
+    });
     it('enforces a same-origin script policy while supporting React styles and microphone use', () => {
         const config = JSON.parse(read('vercel.json'));
         const headers = Object.fromEntries(config.headers[0].headers.map((h: { key: string; value: string }) => [h.key, h.value]));

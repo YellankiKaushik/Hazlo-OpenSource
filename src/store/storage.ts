@@ -18,7 +18,8 @@ export function isStoredEntry(value: unknown): value is Entry {
         (value.syncError === undefined || typeof value.syncError === 'string') &&
         (value.syncedAt === undefined || date(value.syncedAt)) &&
         (value.syncUncertain === undefined || typeof value.syncUncertain === 'boolean') &&
-        (value.syncPayload === undefined || snapshot(value.syncPayload));
+        (value.syncPayload === undefined || snapshot(value.syncPayload) && value.syncPayload.clientEntryId === value.id &&
+            Date.parse(value.syncPayload.capturedAt) === Date.parse(value.createdAt) && value.syncPayload.rawSpeech === value.rawText);
 }
 
 export function recoverEntries(entries: Entry[]): Entry[] {
@@ -39,6 +40,7 @@ export function recoverEntries(entries: Entry[]): Entry[] {
 
 export function safeStorage(onIssue: (message: string) => void): StateStorage {
     let writable = true;
+    let lastRead: string | null | undefined;
     const fail = (message: string) => {
         if (!writable) return;
         writable = false;
@@ -48,6 +50,7 @@ export function safeStorage(onIssue: (message: string) => void): StateStorage {
         getItem(name) {
             try {
                 const raw = localStorage.getItem(name);
+                lastRead = raw;
                 if (raw === null) return null;
                 const parsed = JSON.parse(raw);
                 if (!object(parsed) || parsed.version !== 0 || !object(parsed.state) || !Array.isArray(parsed.state.entries) ||
@@ -61,7 +64,14 @@ export function safeStorage(onIssue: (message: string) => void): StateStorage {
         },
         setItem(name, value) {
             if (!writable) return;
-            try { localStorage.setItem(name, value); } catch {
+            try {
+                if (lastRead !== undefined && localStorage.getItem(name) !== lastRead) {
+                    fail('Saved data changed in another tab. Its newer notes are preserved. Back up this tab\'s temporary changes before reloading, and use one active tab to edit.');
+                    return;
+                }
+                localStorage.setItem(name, value);
+                lastRead = value;
+            } catch {
                 fail('Browser storage is unavailable or full. Existing stored notes are preserved; new changes are temporary in this tab. Back up your notes before closing it.');
             }
         },

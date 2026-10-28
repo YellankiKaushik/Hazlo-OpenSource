@@ -34,6 +34,14 @@ describe('safe Notion client', () => {
         expect((await saveToNotion(entry({ rawText: 'x'.repeat(20001) }))).error).toContain('kept locally');
         expect(fetch).not.toHaveBeenCalled();
     });
+    it('checks aggregate UTF-8 JSON bytes before sending otherwise valid strings', async () => {
+        const { saveToNotion } = await service();
+        const large = entry({ rawText: '测'.repeat(20000), tasks: Array.from({ length: 30 }, (_, i) => ({
+            id: 'task-' + i, text: '测'.repeat(1000), completed: false, createdAt: entry().createdAt,
+        })) });
+        expect((await saveToNotion(large)).error).toContain('100 KiB');
+        expect(fetch).not.toHaveBeenCalled();
+    });
     it('stops after one ambiguous network failure and warns of duplicates', async () => {
         const { saveToNotion } = await service();
         vi.mocked(fetch).mockRejectedValue(new Error('PRIVATE DETAILS'));
@@ -46,6 +54,12 @@ describe('safe Notion client', () => {
     it.each([500, 502, 504])('never automatically retries ambiguous HTTP %s', async status => {
         const { saveToNotion } = await service();
         vi.mocked(fetch).mockResolvedValue(response(status, { error: 'sync_outcome_unknown' }));
+        expect((await saveToNotion(entry())).uncertain).toBe(true);
+        expect(fetch).toHaveBeenCalledTimes(1);
+    });
+    it.each([408, 409])('requires uncertain-outcome recovery for HTTP %s without a trusted error body', async status => {
+        const { saveToNotion } = await service();
+        vi.mocked(fetch).mockResolvedValue(response(status, {}));
         expect((await saveToNotion(entry())).uncertain).toBe(true);
         expect(fetch).toHaveBeenCalledTimes(1);
     });

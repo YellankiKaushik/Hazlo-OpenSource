@@ -51,6 +51,8 @@ The persist key remains hazlo-storage, envelope version 0. Only entries and last
 
 Hydration validates types, timestamps, task arrays, sync metadata and snapshot shapes. It copies data fields, ignoring unknown store/action keys. Malformed/incompatible storage is not overwritten: reads return no unsafe state, writes are locked for that tab, and a warning tells the user to back up original storage. Quota/blocked storage errors keep in-memory capture usable with an explicit temporary-data warning. localStorage is unencrypted, same-origin-readable and not permanent backup.
 
+Snapshot identity, original capture time and transcript must match the owning entry. A stale tab cannot overwrite a different stored value observed immediately before a write; it warns and keeps its own new edits temporary. This check does not make localStorage transactional or implement automatic cross-tab merging. The frontend also checks the aggregate 100 KiB UTF-8 JSON limit before sending a sync request.
+
 Task completion/deletion and entry deletion remain local; they do not update/delete already-created Notion pages. Midnight rollover copies yesterday's incomplete tasks once to today using new IDs/time, local-only status and no inherited remote snapshot. It preserves the original entry and makes no automatic Notion write.
 
 ## API contract

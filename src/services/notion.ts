@@ -28,9 +28,9 @@ function safeError(status: number, code: string): NotionSyncResult {
         error: 'The sync outcome is unknown. Check Notion before retrying; a retry may create a duplicate page.',
     };
     if (status === 429) return { ok: false, error: 'Sync is rate limited. Wait at least 60 seconds before retrying.' };
-    if (status === 409) return { ok: false, error: 'This entry ID was already used with different content. Check Notion before retrying.' };
+    if (status === 409) return { ok: false, uncertain: true, error: 'This entry ID was already used with different content. Check Notion before retrying.' };
     if (status === 413 || (status === 400 && ['transcript_too_long', 'invalid_tasks'].includes(code))) {
-        return { ok: false, error: 'This entry exceeds sync limits (20,000 transcript characters, 80 tasks, 2,000 characters per task). Your full entry is kept locally.' };
+        return { ok: false, error: 'This entry exceeds sync limits (20,000 transcript characters, 80 tasks, 2,000 characters per task, 100 KiB JSON). Your full entry is kept locally.' };
     }
     if (code === 'server_not_configured') return { ok: false, error: 'Notion sync needs server configuration. Your entry is saved locally.' };
     return { ok: false, error: 'This entry could not be synced. Check configuration before retrying. Your entry is saved locally.' };
@@ -47,7 +47,7 @@ async function submit(payload: SyncPayload): Promise<NotionSyncResult> {
         });
         const body = await response.json().catch(() => null);
         if (response.ok && body?.ok === true && typeof body.pageId === 'string') return { ok: true };
-        if (response.ok || response.status >= 500 && body?.error !== 'server_not_configured' && body?.error !== 'notion_sync_failed') {
+        if (response.ok || response.status === 408 || response.status >= 500 && body?.error !== 'server_not_configured' && body?.error !== 'notion_sync_failed') {
             return safeError(response.status, 'sync_outcome_unknown');
         }
         return safeError(response.status, typeof body?.error === 'string' ? body.error : '');
@@ -64,6 +64,7 @@ export async function saveToNotion(entry: Entry): Promise<NotionSyncResult> {
         return safeError(400, 'transcript_too_long');
     }
     const serialized = JSON.stringify(payload);
+    if (new TextEncoder().encode(serialized).byteLength > 102400) return safeError(413, 'body_too_large');
     const existing = active.get(entry.id);
     if (existing) return existing.serialized === serialized ? existing.promise : safeError(409, 'idempotency_conflict');
     const promise = submit(payload);
