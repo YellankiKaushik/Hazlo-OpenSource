@@ -1,5 +1,7 @@
 # Hazlo security audit report
 
+> Phase 2 update (2026-10-28): the original Phase 1 evidence below is retained as a historical snapshot. The current independent verification, additional fixes, real Vercel Preview results, environment/firewall release gates and disclosed CLI incident/approved cleanup are in [SECURITY_RELEASE_READINESS.md](SECURITY_RELEASE_READINESS.md). Corrected code was verified at **6cf0b173e86fc03aa1cb650271386968acc7af79** with **146 tests passing**; the full branch comparison is now 45 paths after the readiness report. Do not interpret Phase 1 provider-access limitations or 138-test count as the latest Phase 2 results.
+
 ## A. Executive summary
 
 - Audit date: **2026-10-28** (owner's Asia/Calcutta date).
@@ -229,3 +231,17 @@ See [SECURITY.md](../SECURITY.md), [DEPLOYMENT.md](DEPLOYMENT.md), [SETUP.md](SE
 The branch is ready for independent code/security review with passing local checks. It is not a declaration that an enabled anonymous public writer is fully secure or production-ready. Keep public demos local-only and complete owner environment/rate-limit/rotation/deployment checks before an approved release.
 
 References: [Notion request limits](https://developers.notion.com/reference/request-limits), [Vercel WAF rate limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting), [Vercel Node.js runtime](https://vercel.com/docs/functions/runtimes/node-js). Implementation limits may be stricter than provider limits.
+
+## Phase 2 independent verification addendum
+
+The follow-up rechecked all HZ-01 through HZ-15 claims against source, unit tests, both dependency graphs, local browser flows and the real protected Preview. It reproduced and fixed missing 408/409 retry uncertainty, stale-tab persistence overwrite, mismatched retry snapshots and missing client aggregate-byte preflight. API tests moved intact from api/notion-sync.test.js to tests/api/notion-sync.test.js after actual Vercel inspection showed the test file deployed as an extra function. The corrected Preview has only api/notion-sync.
+
+Commit **6cf0b173e86fc03aa1cb650271386968acc7af79** changes 12 focused paths: SECURITY.md; docs/TECHNICAL_DOCUMENTATION.md; src/services/notion.ts and its test; src/store/storage.ts and its test; src/store/useStore.test.ts; src/utils/security.test.ts; the API test move; tools/security/README.md; tools/security/browser-check.mjs; new tools/security/preview-check.mjs. This audit addendum and the new release-readiness report are documentation follow-up. No dependency, media, license, extraction, speech or theme-styling changes were introduced in Phase 2.
+
+Independent results: frozen installs, typecheck, 146 tests in 9 files, build, production/full/promo audits (zero known advisories), local and mocked-enabled browser checks, sandboxed render checks, signature scans, local links and whitespace checks pass. On the protected Preview at the corrected SHA, real headers/CSP, disabled GET/POST, assets/PWA, capture/tasks/persistence/themes/mobile and corrupt-storage warnings passed with no browser errors, CSP violations, third-party requests or real Notion writes.
+
+Scoped Vercel CLI access resolved the earlier connector limitations. Correct project is hazlo-opensource (prj_j31V27y7KOW9YrXYTWfqQxB8XAGW), main/root/Node 24, team kaushik-yellanki-project on Hobby. Custom rules are empty with no drafts. Production still uses legacy env keys; new flags/origins are absent. An unprepared merge will stop automatic sync. Draft PR creation remains blocked by connector 403; gh unavailable. Main remains e6d10b040874cf135d3aaa66353c9b9ba3b0785a and no production application deployment occurred.
+
+Operational incident: CLI curl unexpectedly generated one persistent protection-bypass token for the incorrect ignored hazlo-kaushik link before its request failed. The owner explicitly approved identifying/revoking only this token. Exact creation metadata identified it uniquely; it was revoked with regeneration disabled. Zero remaining tokens and no bound automation-bypass env entry were verified; no pre-existing tokens were present and no value was disclosed/committed. Further successful Preview tests used short-lived OIDC in an isolated correctly linked context. No production Notion credentials, firewall settings or paid features were changed.
+
+Final recommendation remains **REVIEW REQUIRED — UNRESOLVED RISKS**. The release-readiness report contains per-finding evidence, operational incident details, exact owner configuration/release ordering, rollback instructions and blocked checks. It supersedes historical Phase 1 claims where later evidence differs.
