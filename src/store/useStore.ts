@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { Entry } from '../types';
 import { extractTasks } from '../utils/taskExtractor';
 import { formatDate, formatTime, getTodayDate, shouldRollover, getYesterdayDate } from '../utils/dateUtils';
-import { saveToNotion } from '../services/notion';
+import { createSyncPayload, isNotionSyncEnabled, saveToNotion } from '../services/notion';
+import { recoverEntries, safeStorage } from './storage';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ interface HazloState {
     isProcessing: boolean;
     currentTranscript: string;
     error: string | null;
+    storageWarning: string | null;
 
     // Entry actions
     addEntry: (rawText: string) => void;
@@ -41,13 +43,16 @@ interface HazloState {
     getIncompleteTasks: () => { entry: Entry; task: Entry['tasks'][0] }[];
 }
 
-const generateId = () => Math.random().toString(36).substring(2, 11);
+const generateId = () => crypto.randomUUID();
+let reportStorageIssue: (message: string) => void = () => {};
+const storage = createJSONStorage(() => safeStorage(message => reportStorageIssue(message)));
 
 // ── Store ──────────────────────────────────────────────────────────────────────
 
 export const useHazloStore = create<HazloState>()(
     persist(
         (set, get) => {
+            reportStorageIssue = message => set({ storageWarning: message });
             const applySyncResult = async (entry: Entry) => {
                 const result = await saveToNotion(entry);
                 const nowIso = new Date().toISOString();
@@ -56,12 +61,15 @@ export const useHazloStore = create<HazloState>()(
                     entries: state.entries.map(current => {
                         if (current.id !== entry.id) return current;
 
+                        if (result.disabled) return { ...current, syncStatus: 'local', syncError: undefined, syncUncertain: false };
+
                         if (result.ok) {
                             return {
                                 ...current,
                                 syncStatus: 'synced',
                                 syncedAt: nowIso,
                                 syncError: undefined,
+                                syncUncertain: false,
                                 updatedAt: nowIso,
                             };
                         }
@@ -70,6 +78,7 @@ export const useHazloStore = create<HazloState>()(
                             ...current,
                             syncStatus: 'failed',
                             syncError: result.error || 'This entry could not be synced. Please retry.',
+                            syncUncertain: result.uncertain === true,
                             updatedAt: nowIso,
                         };
                     }),
@@ -84,12 +93,12 @@ export const useHazloStore = create<HazloState>()(
             isProcessing: false,
             currentTranscript: '',
             error: null,
+            storageWarning: null,
 
             // ── Add entry ─────────────────────────────────────────────────────
 
             addEntry: (rawText: string) => {
                 if (typeof rawText !== 'string' || !rawText.trim()) {
-                    console.warn('[Hazlo/Store] addEntry aborted: rawText is empty or invalid.');
                     return;
                 }
 
@@ -100,13 +109,14 @@ export const useHazloStore = create<HazloState>()(
                     id: generateId(),
                     rawText: rawText.trim(),
                     tasks,
-                    syncStatus: 'pending',
+                    syncStatus: isNotionSyncEnabled() ? 'pending' : 'local',
                     syncError: undefined,
                     date: formatDate(now),
                     time: formatTime(now),
                     createdAt: now.toISOString(),
                     updatedAt: now.toISOString(),
                 };
+                if (isNotionSyncEnabled()) newEntry.syncPayload = createSyncPayload(newEntry);
 
                 // 1. Commit to localStorage immediately (synchronous, reliable)
                 set(state => {
@@ -118,10 +128,7 @@ export const useHazloStore = create<HazloState>()(
                 });
 
                 // 2. Fire-and-forget Notion sync (never blocks UI or localStorage)
-                console.log('[Hazlo/Store] Triggering Notion background sync for entry:', newEntry.id);
-                applySyncResult(newEntry).catch(err => {
-                    console.error('[Hazlo/Notion] Unhandled background sync error:', err);
-                });
+                if (isNotionSyncEnabled()) void applySyncResult(newEntry).catch(() => set({ error: 'Sync unavailable. Your entry remains local.' }));
             },
 
             // ── Delete entry ──────────────────────────────────────────────────
@@ -134,7 +141,7 @@ export const useHazloStore = create<HazloState>()(
 
             retrySyncEntry: (entryId: string) => {
                 const entry = get().entries.find(e => e.id === entryId);
-                if (!entry || entry.syncStatus !== 'failed') return;
+                if (!entry || !['failed', 'local'].includes(entry.syncStatus ?? '') || !isNotionSyncEnabled()) return;
 
                 const nowIso = new Date().toISOString();
                 const retryEntry: Entry = {
@@ -142,6 +149,7 @@ export const useHazloStore = create<HazloState>()(
                     syncStatus: 'pending',
                     syncError: undefined,
                     updatedAt: nowIso,
+                    syncPayload: createSyncPayload(entry),
                 };
 
                 set(state => ({
@@ -150,9 +158,7 @@ export const useHazloStore = create<HazloState>()(
                     ),
                 }));
 
-                applySyncResult(retryEntry).catch(err => {
-                    console.error('[Hazlo/Notion] Unhandled retry sync error:', err);
-                });
+                void applySyncResult(retryEntry).catch(() => set({ error: 'Sync unavailable. Your entry remains local.' }));
             },
 
             // ── Task actions ──────────────────────────────────────────────────
@@ -227,6 +233,11 @@ export const useHazloStore = create<HazloState>()(
                 const now = new Date();
                 const rolledOver = entriesWithIncompleteTasks.map(entry => ({
                     ...entry,
+                    syncStatus: 'local' as const,
+                    syncPayload: undefined,
+                    syncedAt: undefined,
+                    syncError: undefined,
+                    syncUncertain: false,
                     id: generateId(),
                     date: today,
                     time: formatTime(now),
@@ -271,6 +282,12 @@ export const useHazloStore = create<HazloState>()(
         },
         {
             name: 'hazlo-storage',
+            storage,
+            merge: (persisted, current) => {
+                const data = persisted as { entries?: Entry[]; lastRolloverDate?: string | null } | undefined;
+                return { ...current, entries: data?.entries ? recoverEntries(data.entries) : current.entries,
+                    lastRolloverDate: data?.lastRolloverDate ?? null };
+            },
             partialize: state => ({
                 entries: state.entries,
                 lastRolloverDate: state.lastRolloverDate,

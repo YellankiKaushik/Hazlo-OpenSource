@@ -7,7 +7,15 @@ export interface Task {
     createdAt: string;
 }
 
-export type SyncStatus = 'pending' | 'synced' | 'failed';
+export type SyncStatus = 'pending' | 'synced' | 'failed' | 'local';
+
+export interface SyncPayload {
+    rawSpeech: string;
+    status: 'Not started' | 'In progress' | 'Done';
+    capturedAt: string;
+    clientEntryId: string;
+    tasks: { text: string; completed: boolean }[];
+}
 
 export interface Entry {
     id: string;
@@ -16,6 +24,8 @@ export interface Entry {
     syncStatus?: SyncStatus;
     syncedAt?: string;
     syncError?: string;
+    syncUncertain?: boolean;
+    syncPayload?: SyncPayload; // Immutable first-send snapshot; retained for manual retries.
     date: string;      // YYYY-MM-DD
     time: string;      // HH:mm
     createdAt: string; // ISO 8601

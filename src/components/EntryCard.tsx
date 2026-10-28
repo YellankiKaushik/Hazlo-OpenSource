@@ -2,24 +2,28 @@ import { Trash2, Clock, RefreshCw } from 'lucide-react';
 import { Entry, SyncStatus } from '../types';
 import { TaskItem } from './TaskItem';
 import { useHazloStore } from '../store/useStore';
+import { isNotionSyncEnabled } from '../services/notion';
 
 interface EntryCardProps {
     entry: Entry;
 }
 
 function getSyncLabel(status: SyncStatus): string {
+    if (status === 'local') return 'Saved locally';
     if (status === 'pending') return 'Syncing';
     if (status === 'failed') return 'Sync failed';
     return 'Synced';
 }
 
 function getSyncClassName(status: SyncStatus): string {
+    if (status === 'local') return 'sync-pill';
     if (status === 'pending') return 'sync-pill sync-pill--pending';
     if (status === 'failed') return 'sync-pill sync-pill--failed';
     return 'sync-pill sync-pill--synced';
 }
 
 function getSyncDotClassName(status: SyncStatus): string {
+    if (status === 'local') return 'sync-dot';
     if (status === 'pending') return 'sync-dot sync-dot--pending';
     if (status === 'failed') return 'sync-dot sync-dot--failed';
     return 'sync-dot sync-dot--synced';
@@ -51,16 +55,18 @@ export function EntryCard({ entry }: EntryCardProps) {
                             {getSyncLabel(syncStatus)}
                         </span>
 
-                        {syncStatus === 'failed' && (
+                        {(syncStatus === 'failed' || syncStatus === 'local') && isNotionSyncEnabled() && (
                             <button
                                 type="button"
-                                onClick={() => retrySyncEntry(entry.id)}
+                                onClick={() => {
+                                    if (!entry.syncUncertain || window.confirm('Notion may already have this entry. Check your Notion data source first. Retry anyway and risk a duplicate page?')) retrySyncEntry(entry.id);
+                                }}
                                 className="retry-button inline-flex min-h-11 items-center gap-1 rounded-xl px-3 text-xs font-semibold transition-colors"
                                 aria-label="Retry Notion sync"
                                 title="Retry Notion sync"
                             >
                                 <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-                                Retry
+                                {syncStatus === 'local' ? 'Sync' : 'Retry'}
                             </button>
                         )}
                     </div>

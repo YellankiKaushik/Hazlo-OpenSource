@@ -68,6 +68,10 @@ What they check:
 - Rotate any token that was accidentally exposed.
 - Remember that `VITE_` variables are visible in browser code.
 
+## Security-sensitive changes
+
+Read [SECURITY.md](SECURITY.md). Keep local-only mode the default, preserve the no-login architecture and Preview write isolation, and never reintroduce frontend shared-secret authentication. Use mocked Notion requests in tests. Document global rate-limit/durable-idempotency limitations honestly. Run pnpm audit (also in tools/promo-video when its dependencies change) alongside the required checks. Do not deploy or change provider firewall/environment settings without owner authorization.
+
 ## Notion Contract
 
 Do not change the Notion API contract casually. Hazlo currently expects:

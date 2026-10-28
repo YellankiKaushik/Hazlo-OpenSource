@@ -1,190 +1,85 @@
-# Hazlo Deployment Guide
+# Hazlo deployment guide
 
-This guide covers deploying Hazlo from GitHub to Vercel, configuring environment variables, checking logs, and verifying that Notion sync works after deployment.
+Fork the repository into your GitHub account and import the fork through the [Vercel dashboard](https://vercel.com/). Choose Vite, install with `pnpm install --frozen-lockfile`, build with `pnpm build`, output `dist`. Use Node.js 24 LTS and `main` as the Production branch after reviewing changes.
 
-## Deployment Model
+**This security branch is for review only. Do not promote or merge it until the owner approves.** A non-main Git push may create an automatic Preview deployment; it must not become a production deployment. No GitHub Actions workflow is required by this project.
 
-Hazlo is a Vite React app plus one Vercel Function:
+## Local-only demo (recommended public default)
 
-```text
-GitHub main branch
-  -> Vercel build
-  -> dist frontend
-  -> /api/notion-sync serverless route
-  -> Notion API
-```
+Set `NOTION_SYNC_ENABLED=false` and `VITE_NOTION_SYNC_ENABLED=false` (or leave both absent). Do not assign a real Notion token to the public demo. Capture, extraction, storage, themes and voice/manual input work locally; the app labels entries Saved locally and does not POST to Notion.
 
-The frontend is built once per deployment. The backend function reads server-side environment variables at runtime.
+## Explicit personal Notion sync
 
-## GitHub to Vercel Connection
+Read [SECURITY.md](../SECURITY.md) before enabling this. There is no login: anyone reaching the enabled endpoint can forge a valid request. A browser flag or Origin check is not owner authentication.
 
-1. Push your Hazlo repository to GitHub.
-2. Open [Vercel](https://vercel.com/).
-3. Create a new project.
-4. Import the GitHub repository.
-5. Select the Vite framework preset if Vercel does not detect it automatically.
-6. Deploy from the `main` branch.
+In Project Settings → Environment Variables, add:
 
-## Production Branch
-
-Use `main` as the production branch unless you intentionally choose a different branch in Vercel settings.
-
-For this repository, normal maintenance should happen on short-lived branches and merge into `main` through pull requests. Direct commits to `main` should be limited to trusted maintenance work.
-
-## Build Behavior
-
-Recommended Vercel settings:
-
-| Setting | Value |
-| --- | --- |
-| Framework preset | Vite |
-| Install command | `pnpm install --frozen-lockfile` |
-| Build command | `pnpm build` |
-| Output directory | `dist` |
-
-`vercel.json` rewrites non-API routes to `index.html`, so the React app can handle browser navigation.
-
-## Environment Variables
-
-Add these in Vercel Project Settings.
-
-Required for Production:
-
-| Variable | Purpose |
-| --- | --- |
-| `NOTION_TOKEN` | Server-side Notion integration token. |
-| `NOTION_DATA_SOURCE_ID` | Target Notion data source ID. |
-| `API_SECRET` | Backend shared secret. |
-| `VITE_API_SECRET` | Frontend copy of `API_SECRET`; must match exactly. |
-
-Optional:
-
-| Variable | Purpose |
-| --- | --- |
-| `VITE_API_BASE_URL` | Backend origin when frontend and API are hosted separately. Leave blank for normal same-origin Vercel deploys. |
-
-Never put real secrets in the repository.
-
-## Production vs Preview Environments
-
-Vercel lets you set variables for Production, Preview, and Development.
-
-- Production variables affect deployments from the production branch.
-- Preview variables affect pull request and non-production deployments.
-- Development variables can be pulled locally with `vercel env pull`.
-
-Make sure every required variable is enabled in the environment you are testing.
-
-## VITE Variable Build-Time Behavior
-
-Vite exposes only variables prefixed with `VITE_` to frontend code.
-
-Hazlo uses:
-
-- `VITE_API_SECRET`
-- `VITE_API_BASE_URL`
-
-These are injected into the frontend bundle during `pnpm build`. If you change either value in Vercel, redeploy before expecting the browser app to use the new value.
-
-Server-only variables such as `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, and `API_SECRET` are read by the Vercel Function and must not be exposed in browser code.
-
-## Serverless API Route
-
-The backend route is:
-
-```text
-/api/notion-sync
-```
-
-It is implemented in `api/notion-sync.js`.
-
-The function:
-
-1. Allows `OPTIONS` preflight.
-2. Accepts `POST` requests.
-3. Checks `X-API-Secret` against `API_SECRET`.
-4. Verifies `NOTION_TOKEN` and `NOTION_DATA_SOURCE_ID`.
-5. Validates the request body.
-6. Creates a Notion page with `Raw Speech`, `Status`, and `Date`.
-7. Adds the transcript and extracted tasks as page blocks.
-
-Same-origin Vercel deployments do not require cross-origin CORS access. If you host the frontend and backend on different origins, check `ALLOWED_ORIGINS` in `api/notion-sync.js`.
-
-## Redeployment
-
-Redeploy when:
-
-- You merge changes into `main`.
-- You change `VITE_API_SECRET`.
-- You change `VITE_API_BASE_URL`.
-- You change Notion schema-related code.
-- You want a Preview deployment promoted to Production.
-
-Changing server-only variables may take effect for new function invocations, but redeploying after environment changes is still the simplest and most reproducible path.
-
-## Checking Logs
-
-Use Vercel logs when Notion sync fails.
-
-1. Open the Vercel project.
-2. Open the latest deployment.
-3. Find function logs for `/api/notion-sync`.
-4. Look for safe error codes such as `unauthorized`, `server_not_configured`, or `notion_sync_failed`.
-
-The backend intentionally avoids logging raw secrets.
-
-## Rollback Basics
-
-If a deployment breaks:
-
-1. Open the Vercel project.
-2. Go to Deployments.
-3. Choose a previous successful deployment.
-4. Promote or redeploy it according to Vercel's UI.
-5. Re-test Notion sync after rollback.
-
-Rollback does not change your Notion schema or environment variables. If the problem was caused by an env change, fix the variable as well.
-
-## Post-Deploy Verification
-
-After deployment:
-
-- Website loads at the deployed URL.
-- Theme toggle works.
-- "Type instead" creates an entry.
-- Voice input works in a supported browser.
-- Entry remains after refresh.
-- Task extraction works for simple phrasing.
-- Entry reaches `Synced`.
-- A Notion page appears in the target data source.
-- The Notion page contains `Raw Speech`, `Status`, and `Date`.
-- Extracted tasks appear as Notion `to_do` blocks.
-
-## Troubleshooting Failed Notion Sync
-
-| Symptom | Likely cause | Fix |
+| Variable | Where | Value/purpose |
 | --- | --- | --- |
-| `401 unauthorized` | `API_SECRET` and `VITE_API_SECRET` mismatch. | Set both to the same value and redeploy after changing `VITE_API_SECRET`. |
-| `500 server_not_configured` | Missing `NOTION_TOKEN` or `NOTION_DATA_SOURCE_ID`. | Add the missing Vercel variable in the current environment. |
-| `502 notion_sync_failed` | Notion rejected the page creation request. | Check logs for Notion status/code, then verify token, sharing, data source ID, and schema. |
-| Notion `object_not_found` | Wrong data source ID or integration lacks access. | Copy the data source ID again and share the data source with the integration. |
-| Notion `restricted_resource` | Integration permission issue. | Reconnect/share the data source and confirm integration capabilities. |
-| Notion `validation_error` | Property schema mismatch. | Confirm exact properties: `Raw Speech` as Title, `Status` as Status, `Date` as Date. |
-| Local works but Production does not | Production env variables missing or different. | Check the Production environment in Vercel settings. |
-| Preview works but Production does not | Variables set only for Preview. | Enable required variables for Production. |
-| Updated secret still fails | Frontend bundle still has old `VITE_API_SECRET`. | Redeploy after changing any `VITE_` variable. |
+| NOTION_SYNC_ENABLED | Server, Production/Development only | Exactly true to permit writes. |
+| VITE_NOTION_SYNC_ENABLED | Browser build | Exactly true to attempt sync; public, not a secret. |
+| NOTION_TOKEN | Server only | Your own private integration token; no VITE prefix. |
+| NOTION_DATA_SOURCE_ID | Server only | Actual UUID of the connected Notion data source. |
+| NOTION_ALLOWED_ORIGINS | Server only | Exact HTTPS app origin, no trailing slash. |
 
-## Manual Production Test
+Use your own integration and data source with the [documented schema](SETUP.md). Choose minimum read/insert capabilities and a dedicated non-sensitive destination. No additional Notion property is required.
 
-Use this simple entry:
+For Development use your actual local runtime origin, for example `http://localhost:3000`. Production should list only the deployed personal app's exact origin, not localhost or broad wildcard domains. Frontend and API must share an origin. `VITE_API_BASE_URL` is retired.
 
-```text
-Finish the Hazlo deployment check and confirm Notion sync
-```
+## Preview isolation
 
-Expected result:
+Vercel has separate Production, Preview and Development environments. Do not share Production tokens with Preview. The server refuses writes if Vercel sets `VERCEL_ENV=preview`, even if enablement/credentials leaked through environment inheritance. Set the browser flag false for Preview, so it presents local-only mode instead of a failed sync.
 
-1. The entry appears immediately in Hazlo.
-2. At least one task is extracted.
-3. The sync badge changes from `Syncing` to `Synced`.
-4. Notion contains a new page with the transcript and task blocks.
+To verify enabled Notion behavior before release, use a local Vercel runtime with a dedicated test workspace and explicit owner consent for test writes. The repository tests use mocks and never need live credentials.
+
+## Abuse controls: owner configuration still required
+
+The repository does not install a global rate limiter. Configure Vercel Firewall for exact path /api/notion-sync, method POST. Start by logging a generous per-IP threshold (for example 60 per 60 seconds), inspect traffic, test enforcement in Preview without real Notion writes, and tighten to the personal-use threshold (for example 10 per 60 seconds) after owner review. Availability/pricing depend on plan. Monitor logs/usage and false positives. Do not add mandatory normal-use CAPTCHA.
+
+Follow [Vercel WAF rate limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting). If adequate abuse/access protection cannot be configured, leave writes disabled. Per-IP limits cannot stop every unauthorized/distributed write. No firewall rules were changed by this branch.
+
+## Environment migration and rotation
+
+Remove API_SECRET, VITE_API_SECRET, and VITE_API_BASE_URL from Production, Preview, Development and local files. The old frontend shared secret was public: retire it and rotate it anywhere reused. Rebuild and remove/restrict old deployments that still contain the value. Rotate a Notion integration token if exposed or suspected abused; audit the destination for unsolicited pages. Never paste actual values into logs, issues, Git or the audit report.
+
+Vite injects VITE_NOTION_SYNC_ENABLED at build time. After changing it, rebuild/redeploy; changing the server flag alone can stop writes immediately in a runtime that has loaded the new value, but does not change a previously built frontend. Vercel environment changes should be followed by a reviewed redeployment; do not assume an existing deployment has new settings.
+
+## Route, headers and logs
+
+/api/notion-sync supports non-writing GET configuration checks, POST creation, and scoped OPTIONS. GET is not proof that Notion token/permissions/schema work. POST requires approved Origin and JSON with bounded lengths, matching entry/header identifiers and a valid original timestamp.
+
+vercel.json preserves SPA routing and adds CSP, nosniff, no-referrer, DENY framing, HSTS, microphone=self and disabled unrelated permissions. Scripts/connections stay same-origin; React inline styles remain allowed. Inspect actual deployment response headers, including errors, after release.
+
+Function logs show only fixed messages and numeric upstream rejection statuses. Notion response bodies are intentionally not logged because they may echo private input. Investigate token permissions, sharing and exact schema privately; do not enable raw transcript logging to debug.
+
+## Verification after owner-approved release
+
+1. Confirm the live site, PWA metadata, mobile layout and all three themes load without CSP errors.
+2. Save a fictional typed entry; check extraction, task completion, deletion and refresh persistence.
+3. Test microphone support/permission and language preference in a supported browser.
+4. In local-only mode, verify no POST occurs and direct POST returns sync_disabled.
+5. In explicitly enabled personal mode, approve one fictional entry, confirm a page in the intended data source with Raw Speech/Status/Date and task blocks.
+6. Check GET config and POST error responses are no-store/nosniff.
+7. Check a controlled mock failure/retry; ambiguous outcomes require checking Notion before confirming Retry.
+8. Confirm firewall enforcement/usage in provider logs. Test rules with no production credentials.
+
+## Troubleshooting
+
+| Symptom | Meaning / action |
+| --- | --- |
+| Saved locally, no request | Browser flag false; intentional local-only default. |
+| 403 sync_disabled | Server flag false/absent or Vercel Preview. |
+| 403 origin_not_allowed | Exact origin missing/mismatched, malformed allowlist, or cross-site request. Do not use wildcard origins. |
+| 503 server_not_configured | Missing/invalid token, UUID or origin config; fix server settings privately. |
+| 400 / 413 / 415 | Input validation, size or content type failed. Full note stays local. |
+| 429 | Capacity/upstream/provider limit; wait at least 60 seconds before manual retry. |
+| 409 idempotency_conflict | Same recent ID with changed payload. Check Notion; do not blindly create a new ID to bypass it. |
+| 502 notion_sync_failed | Notion rejected the write: inspect sharing, token, schema and numeric status. |
+| sync_outcome_unknown / 504 | A page may already exist. Check Notion before retrying. |
+| Notion 404/403/400 | Respectively inspect data-source ID/access, integration permissions/sharing, exact property schema. |
+| Old browser behavior | Rebuild after a VITE flag change; verify correct deployment URL. |
+| Browser storage warning | Preserve/back up original localStorage before repair; new changes may be temporary. |
+
+## Rollback
+
+After approval, use Vercel Deployments to select a known-good deployment and its supported rollback/promotion action. Do not roll back to the public-secret model with sensitive Notion credentials enabled. Safer immediate containment is to remove/restrict credentials and disable the write flag with a new reviewed deployment/provider rule. Rollbacks do not undo Notion pages, restore localStorage, or necessarily revert environment settings. Re-test headers, local capture and the disabled API before reopening access.

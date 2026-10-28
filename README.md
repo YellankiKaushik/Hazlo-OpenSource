@@ -1,6 +1,6 @@
 # Hazlo by Kaushik
 
-Hazlo is an open-source, voice-first task capture app that turns spoken or typed thoughts into local task entries and syncs them to your own Notion workspace through a small Vercel backend.
+Hazlo is an open-source, voice-first task capture app that turns spoken or typed thoughts into local task entries and optionally syncs them to your own Notion workspace through a small Vercel backend. Public demos default to local-only capture; personal Notion writes require explicit opt-in.
 
 Created and maintained by [Kaushik (@YellankiKaushik)](https://github.com/YellankiKaushik).
 
@@ -93,7 +93,7 @@ In plain English:
 3. Zustand saves the entry in `localStorage` first, so the entry remains after refresh.
 4. The task extractor creates local task items from the text.
 5. The frontend posts the entry to `/api/notion-sync`.
-6. The Vercel Function checks the API secret, reads server-side Notion credentials, and creates a Notion page.
+6. When explicitly enabled, the Vercel Function checks bounded input and the approved browser origin, reads server-only Notion credentials, and creates a Notion page. Origin checks do not authenticate the owner.
 7. If sync fails, the local entry stays available and shows a retry action.
 
 ## Tech Stack
@@ -163,9 +163,9 @@ On Windows PowerShell:
 Copy-Item .env.example .env.local
 ```
 
-4. Create a Notion integration and data source using the Notion setup section below.
+4. Optionally create a Notion integration/data source using the setup below. It is not needed for local capture.
 
-5. Generate an API secret and put the same value in both `API_SECRET` and `VITE_API_SECRET`.
+5. Keep both sync flags false for local-only use. To enable personal sync, follow the environment and security sections below; no frontend shared secret is used.
 
 6. Run the frontend.
 
@@ -223,46 +223,29 @@ A built-in Notion "Created time" property is not a substitute for the custom `Da
 
 ## Environment Variables
 
-Environment variables are configuration values that live outside the source code. They let you use your own Notion workspace and secrets without committing private values to Git.
+Environment variables are settings outside the source code. Copy `.env.example` to the ignored `.env.local` for local work; use Vercel Project Settings for deployment. Never commit real credentials.
 
-Hazlo uses these variables:
-
-| Variable | Required | Used by | Meaning |
-| --- | --- | --- | --- |
-| `NOTION_TOKEN` | Yes | Server only | Secret Notion integration token. Never expose this in frontend code. |
-| `NOTION_DATA_SOURCE_ID` | Yes | Server only | ID of the Notion data source where pages should be created. |
-| `API_SECRET` | Yes | Server only | Shared app secret expected by the backend. |
-| `VITE_API_SECRET` | Yes | Browser bundle | Frontend copy of `API_SECRET`, sent as `X-API-Secret`. |
-| `VITE_API_BASE_URL` | No | Browser bundle | Optional backend origin. Leave blank for same-origin Vercel deployments. |
-
-`API_SECRET` and `VITE_API_SECRET` must contain exactly the same value.
-
-Safe example:
+| Variable | Used by | Meaning |
+| --- | --- | --- |
+| NOTION_SYNC_ENABLED | Server | Defaults false; exactly true permits anonymous remote writes. |
+| VITE_NOTION_SYNC_ENABLED | Browser build | Defaults false; exactly true enables the frontend sync pipeline. Public flag, not a credential. |
+| NOTION_TOKEN | Server only | Your private Notion integration token, required only for enabled personal sync. |
+| NOTION_DATA_SOURCE_ID | Server only | UUID of your connected Notion data source. |
+| NOTION_ALLOWED_ORIGINS | Server only | Exact approved app origin, such as https://your-app.vercel.app, without a trailing slash. |
 
 ```env
+NOTION_SYNC_ENABLED=false
+VITE_NOTION_SYNC_ENABLED=false
 NOTION_TOKEN=your_notion_token_here
 NOTION_DATA_SOURCE_ID=your_notion_data_source_id_here
-API_SECRET=generate_a_random_value
-VITE_API_SECRET=use_the_same_value_as_API_SECRET
-VITE_API_BASE_URL=
+NOTION_ALLOWED_ORIGINS=
 ```
 
-Never commit real values.
+For personal sync, set both flags to exactly true, supply your own token/ID, and set the actual app origin. Keep frontend and API same-origin. Vercel Preview writes are always disabled; do not supply Preview with Notion credentials.
 
-## How to Generate API_SECRET
+**Hazlo has no login. An enabled public endpoint can be called by anyone who imitates the public request format.** Origin/CORS checks, entry IDs and rate limits are not owner authentication. Configure provider abuse/access controls before enabling writes, use a dedicated non-sensitive Notion destination, and read [SECURITY.md](SECURITY.md).
 
-Use Node to generate a random value:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Use the generated value for both:
-
-- `API_SECRET`
-- `VITE_API_SECRET`
-
-Important: `VITE_API_SECRET` is embedded in frontend code because Vite exposes `VITE_` variables to the browser bundle. It should match `API_SECRET`, but it is not equivalent to a truly private server-only credential. Hazlo is designed primarily for personal and self-hosted deployments, not as a complete multi-user authentication system.
+The exposed API_SECRET/VITE_API_SECRET mechanism is retired, along with VITE_API_BASE_URL. Remove these old values from local/Vercel settings. Retire the old shared secret and rotate it anywhere reused. Do not replace it with another browser token.
 
 ## Local Development
 
@@ -274,7 +257,7 @@ pnpm dev
 
 This starts the Vite dev server, usually at `http://localhost:5173`.
 
-Frontend-only mode is useful for UI work, theme checks, task extraction, and localStorage behavior. Notion sync may fail in this mode because Vite alone does not run the Vercel `/api/notion-sync` function.
+Frontend-only mode is useful for UI work, theme checks, task extraction, and localStorage behavior. Local-only capture works in this mode. Enabled Notion sync requires the same-origin Vercel `/api/notion-sync` function, which Vite alone does not run.
 
 ### Full Stack With Vercel
 
@@ -332,13 +315,13 @@ The tests mock browser and network behavior. They do not use a real microphone, 
 5. Set the install command to `pnpm install --frozen-lockfile` if Vercel asks.
 6. Set the build command to `pnpm build` if Vercel asks.
 7. Confirm the output directory is `dist`.
-8. Add these environment variables in Vercel Project Settings: `NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, `API_SECRET`, `VITE_API_SECRET`, and optional `VITE_API_BASE_URL`.
+8. Start with both sync flags false for a safe public demo. To opt into personal writes, configure the five documented variables and provider abuse controls in Vercel Project Settings.
 9. Make sure the required variables are enabled for Production.
 10. Deploy.
 11. If you change any environment variable later, redeploy. This is especially important for `VITE_` variables because Vite injects them during build.
 12. Visit the deployed URL.
 13. Create a test entry.
-14. Confirm the entry appears in Notion.
+14. For explicitly enabled personal sync only, confirm the fictional entry appears in your own Notion data source. Local-only entries show Saved locally.
 
 For more deployment detail, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -352,7 +335,7 @@ Use this checklist after deployment:
 - Microphone works in browsers that support speech recognition.
 - Entry remains after refreshing the page.
 - Task extraction creates tasks for simple task phrasing.
-- Notion page is created.
+- Disabled mode makes no sync POST. For explicitly enabled personal sync, one owner-approved fictional entry creates a Notion page.
 - Retry appears and works when sync fails.
 
 ## Troubleshooting
@@ -361,8 +344,9 @@ Vercel function logs are the main place to diagnose backend problems. In Vercel,
 
 | Problem | Likely cause | Fix |
 | --- | --- | --- |
-| `401` from `/api/notion-sync` | `API_SECRET` and `VITE_API_SECRET` do not match. | Set both to exactly the same value and redeploy after changing `VITE_API_SECRET`. |
-| `500` or `server_not_configured` | `NOTION_TOKEN` or `NOTION_DATA_SOURCE_ID` is missing in Vercel. | Add the missing server-side variable and redeploy. |
+| Saved locally / `403 sync_disabled` | Sync is deliberately disabled, or this is a Vercel Preview. | Keep disabled for demos; follow personal opt-in instructions for your own instance. |
+| `403 origin_not_allowed` | Unapproved Origin or cross-site request. | Set the exact same-origin app URL in NOTION_ALLOWED_ORIGINS; no wildcard/trailing slash. |
+| `503` or `server_not_configured` | `NOTION_TOKEN` or `NOTION_DATA_SOURCE_ID` is missing in Vercel. | Add the missing server-side variable and redeploy. |
 | `502` or `notion_sync_failed` | Notion rejected the request or the integration/schema is wrong. | Check Vercel logs, data source sharing, token, and schema. |
 | `404 object_not_found` from Notion | Wrong data source ID, or the integration cannot access it. | Copy the data source ID again and share the data source with the integration. |
 | `403 restricted_resource` from Notion | Integration permission or sharing issue. | Re-share the data source with the integration and check integration capabilities. |
@@ -386,6 +370,10 @@ Vercel function logs are the main place to diagnose backend problems. In Vercel,
 | `docs` | Deeper architecture, setup, deployment, production, and technical documentation. |
 
 ## Security
+
+See [SECURITY.md](SECURITY.md) for the complete no-login threat model, payload limits, provider controls and credential migration. No global rate limiter or durable exactly-once delivery is claimed.
+
+Entries exceeding sync limits stay local. POSTs are never automatically retried. After a timeout/unknown outcome, check Notion before confirming Retry; duplicates remain possible across server instances. localStorage is unencrypted and readable by same-origin scripts. Storage failures show a warning and preserve the original saved data.
 
 - Never commit `.env`, `.env.local`, real Notion tokens, API secrets, Vercel credentials, or copied production values.
 - Keep `NOTION_TOKEN` server-side only.

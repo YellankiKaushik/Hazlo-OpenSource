@@ -8,6 +8,12 @@ The renderer uses a deterministic Canvas 2D composition in Chromium, Playwright 
 
 The tooling is isolated from the Hazlo application. Its own `pnpm-workspace.yaml` makes this folder an independent pnpm workspace, so installation and render commands use the video package rather than inheriting Hazlo's root workspace. No app package or lockfile changes are needed.
 
+## Security notes
+
+Chrome sandboxing is enabled. Run render tooling as a regular user, not as root/admin. The temporary loopback server serves only approved render assets, checks request origins and rejects traversal/private-file access. It never binds a public network interface. Test it with `pnpm test` in this directory. Only esbuild is allowed to run an installation build script; do not bypass dependency build controls for arbitrary packages.
+
+Published films are historical product demonstrations. The current application defaults to local-only capture, with explicit personal Notion sync opt-in; see [SECURITY.md](../../SECURITY.md). Recapture sync-state footage only against a dedicated local fixture that enables the frontend pipeline and intercepts all API requests. Never enable real production writes for screenshots.
+
 ## Requirements
 
 - Node.js 22 or newer and pnpm.

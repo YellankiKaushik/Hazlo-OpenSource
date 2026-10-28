@@ -25,7 +25,7 @@ node --version
 npm --version
 ```
 
-Use a current LTS version of Node.js. If Node is missing, install it from [nodejs.org](https://nodejs.org/), then open a new terminal.
+Use Node.js 24 LTS. If Node is missing, install it from [nodejs.org](https://nodejs.org/), then open a new terminal.
 
 ## 3. Install pnpm
 
@@ -85,9 +85,9 @@ Your `.env.local` should contain these keys:
 ```env
 NOTION_TOKEN=your_notion_token_here
 NOTION_DATA_SOURCE_ID=your_notion_data_source_id_here
-API_SECRET=generate_a_random_value
-VITE_API_SECRET=use_the_same_value_as_API_SECRET
-VITE_API_BASE_URL=
+NOTION_SYNC_ENABLED=false
+VITE_NOTION_SYNC_ENABLED=false
+NOTION_ALLOWED_ORIGINS=
 ```
 
 Do not paste real values into `.env.example`; that file is committed as a public template.
@@ -154,24 +154,15 @@ Put the value in `.env.local`:
 NOTION_DATA_SOURCE_ID=your_notion_data_source_id_here
 ```
 
-## 11. Generate the API Secret
+## 11. Choose local-only or personal sync
 
-Hazlo uses a lightweight shared secret between the frontend and backend.
+The default requires no Notion integration: keep NOTION_SYNC_ENABLED=false and VITE_NOTION_SYNC_ENABLED=false. Local capture/extraction/persistence still work.
 
-Generate one with Node:
+To opt into personal sync, read [SECURITY.md](../SECURITY.md), then set both flags to exactly true and fill your own server-only token and data-source UUID. Set NOTION_ALLOWED_ORIGINS to the exact origin at which you open the app, with its port and no trailing slash. For local Vercel dev this is often http://localhost:3000; use the actual printed origin. For production use your exact HTTPS deployment origin.
 
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+Keep frontend and API on the same origin. There is no login and no confidential browser credential. Anyone able to reach an enabled public endpoint can imitate the public request. Use a dedicated Notion destination and configure provider abuse/access controls before enabling public writes; otherwise keep them disabled.
 
-Use the exact same generated value for:
-
-```env
-API_SECRET=paste_generated_value_here
-VITE_API_SECRET=paste_generated_value_here
-```
-
-`API_SECRET` is read by the backend. `VITE_API_SECRET` is bundled into the frontend, so it is browser-visible. This is useful for a personal/self-hosted app, but it is not full authentication for a public multi-user product.
+API_SECRET, VITE_API_SECRET and VITE_API_BASE_URL are retired. Remove them, retire the old exposed shared secret, and rotate it anywhere it was reused. Never add a private Notion token to a VITE-prefixed setting.
 
 ## 12. Run Frontend-Only Development
 
@@ -195,7 +186,7 @@ This mode is enough to test:
 - Browser localStorage persistence.
 - Task extraction.
 
-Notion sync may fail in this mode because Vite does not run Vercel Functions by itself.
+Local-only mode needs no backend. Enabled Notion sync requires vercel dev because Vite does not run Vercel Functions by itself.
 
 ## 13. Run Full-Stack Local Development With Vercel
 
@@ -243,22 +234,15 @@ You can deploy through the Vercel website without installing the CLI.
 8. Add the environment variables in Project Settings.
 9. Deploy.
 
-Required Vercel variables:
+For a local-only demo set both sync flags false and do not supply a real Notion token.
 
-- `NOTION_TOKEN`
-- `NOTION_DATA_SOURCE_ID`
-- `API_SECRET`
-- `VITE_API_SECRET`
+For personal Production sync configure NOTION_SYNC_ENABLED=true, VITE_NOTION_SYNC_ENABLED=true, NOTION_TOKEN, NOTION_DATA_SOURCE_ID and NOTION_ALLOWED_ORIGINS as above. Set exact values in Vercel Project Settings → Environment Variables → Production. Follow [the deployment guide](DEPLOYMENT.md) for firewall setup, logs and rollback. Rebuild after changing the browser flag.
 
-Optional:
-
-- `VITE_API_BASE_URL`
-
-For normal same-origin Vercel deployments, leave `VITE_API_BASE_URL` blank.
+Preview must have no Notion credentials and a false browser flag. The API always disables writes when Vercel marks the environment preview.
 
 ## 15. First Sync Test
 
-After deployment:
+For explicitly enabled personal sync only, after owner-approved deployment:
 
 1. Open the deployed app.
 2. Use "Type instead".
@@ -282,7 +266,7 @@ Local success:
 
 Full-stack success:
 
-- `/api/notion-sync` does not return `401`, `500`, or `502`.
+- GET /api/notion-sync reports enabled/configured (configuration only, not a real Notion connectivity test).
 - A saved entry reaches `Synced`.
 - A Notion page appears in the configured data source.
 
@@ -304,8 +288,8 @@ git diff --check
 | Copying the database ID instead of data source ID | Notion may reject page creation. | Copy the data source ID from "Manage data sources" or retrieve it from the API. |
 | Forgetting to share the data source with the integration | Notion returns access errors. | Connect/share the data source with the integration. |
 | Missing the custom `Date` property | Notion returns a validation error. | Add a `Date` property named exactly `Date`. |
-| `API_SECRET` and `VITE_API_SECRET` do not match | Backend returns `401`. | Use the exact same value for both and redeploy. |
-| Changing `VITE_` variables without redeploying | Production still uses old frontend values. | Redeploy after changing `VITE_API_SECRET` or `VITE_API_BASE_URL`. |
+| Sync flags false or Preview deployment | Entry is Saved locally or API returns sync_disabled. | Intentional safe default. Only opt in for your own personal instance. |
+| Changing `VITE_` variables without redeploying | Production still uses old frontend values. | Redeploy after changing VITE_NOTION_SYNC_ENABLED. |
 | Expecting `pnpm dev` to run the backend | Notion sync fails locally. | Use `vercel dev` for full-stack local testing. |
 
 ## 18. Files You Should Never Commit
@@ -322,3 +306,9 @@ Never commit:
 - Machine-specific paths or private local configuration
 
 The committed `.env.example` file must contain placeholders only.
+
+## Storage and retry safety
+
+Notes in localStorage are unencrypted and accessible to scripts/extensions on the same origin. Back them up. Corrupt or incompatible storage is preserved rather than overwritten; a visible warning explains recovery and temporary in-tab changes. Do not clear site data before saving the original hazlo-storage value.
+
+There are no automatic sync POST retries. Check Notion before confirming a retry after an ambiguous timeout/network failure. Warm-instance coalescing is best-effort and does not prevent duplicates across cold instances. Original timestamps and the first-send payload survive retries. Over-limit entries remain local; the API accepts 20,000 transcript characters, 80 tasks and 2,000 characters per task within 100 KiB JSON.

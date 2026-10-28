@@ -13,7 +13,7 @@ Hazlo currently supports:
 - Rule-based task extraction.
 - Local entries and tasks stored with Zustand and `localStorage`.
 - Daily rollover for incomplete local tasks.
-- Notion sync through the Vercel `/api/notion-sync` function.
+- Optional, explicitly enabled personal Notion sync through the Vercel `/api/notion-sync` function.
 - Sync status and retry for failed Notion writes.
 - System, light, and dark themes.
 - PWA manifest metadata and install icons.
@@ -44,7 +44,7 @@ Local entries include:
 - extracted tasks
 - local date and time
 - `createdAt` and `updatedAt`
-- sync status: `pending`, `synced`, or `failed`
+- sync status: `local`, `pending`, `synced`, or `failed`
 - optional sync error details
 
 Notion receives:
@@ -61,11 +61,10 @@ Hazlo expects these environment variables:
 
 - `NOTION_TOKEN`
 - `NOTION_DATA_SOURCE_ID`
-- `API_SECRET`
-- `VITE_API_SECRET`
-- optional `VITE_API_BASE_URL`
+- `NOTION_SYNC_ENABLED` and browser build flag `VITE_NOTION_SYNC_ENABLED` (both false by default)
+- `NOTION_ALLOWED_ORIGINS` (exact app origin, when enabling writes)
 
-`API_SECRET` and `VITE_API_SECRET` must match exactly. `NOTION_TOKEN` must stay server-side.
+The old shared-secret/API-base variables are retired. `NOTION_TOKEN` stays server-side. Sync is opt-in; Preview writes are disabled. There is no login, so enabled public writes remain anonymous despite Origin checks. See [SECURITY.md](SECURITY.md).
 
 The Notion data source must contain:
 
@@ -113,7 +112,7 @@ Hazlo should stay fast, understandable, and personal-first. The current product 
 
 Future work should be treated as roadmap exploration, not current behavior:
 
-- stronger authentication for multi-user use
+- better abuse controls for personal no-login deployments
 - better task extraction
 - optional AI-based structuring
 - calendar or reminder integrations

@@ -20,7 +20,11 @@
 - Never commit `.env`, `.env.local`, real Notion tokens, API secrets, Vercel credentials, or other private credentials.
 - Keep `NOTION_TOKEN` server-side.
 - Treat all `VITE_` variables as browser-visible.
-- `VITE_API_SECRET` must match `API_SECRET`, but it is not a truly private browser credential.
+- Preserve the no-login architecture. Never reintroduce browser-shared secret authentication.
+- Default both sync flags to false; opt-in writes require server-only Notion credentials and exact NOTION_ALLOWED_ORIGINS.
+- Preview writes must remain disabled. Origin/CORS are not authentication.
+- Never claim warm-instance deduplication is durable or that per-instance capacity is global rate limiting.
+- Run dependency audits and security regression tests for security-sensitive changes.
 
 ## Architecture Invariants
 

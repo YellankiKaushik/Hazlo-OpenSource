@@ -11,6 +11,7 @@ export function dependency(name) {
 }
 export const chromeOptions = {
   headless: true,
+  chromiumSandbox: true,
   ...(process.env.HAZLO_CHROME ? { executablePath: process.env.HAZLO_CHROME } : { channel: 'chrome' }),
-  args: ['--disable-dev-shm-usage', '--no-sandbox', '--autoplay-policy=no-user-gesture-required'],
+  args: ['--disable-dev-shm-usage', '--autoplay-policy=no-user-gesture-required'],
 };

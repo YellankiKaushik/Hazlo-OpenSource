@@ -1,139 +1,84 @@
-import { Entry } from '../types';
-
-interface NotionSyncPayload {
-    rawSpeech: string;
-    status: 'Not started' | 'In progress' | 'Done';
-    capturedAt: string;
-    clientEntryId?: string;
-    tasks?: { text: string; completed: boolean }[];
-}
+import { Entry, SyncPayload } from '../types';
 
 export interface NotionSyncResult {
     ok: boolean;
     error?: string;
+    disabled?: boolean;
+    uncertain?: boolean;
 }
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '';
-const NOTION_SYNC_ENDPOINT = `${API_BASE}/api/notion-sync`;
-const RETRY_DELAYS_MS = [400, 1200];
-const isDev = import.meta.env.DEV;
-const log = (...args: unknown[]) => {
-    if (isDev) console.log(...args);
-};
-const warn = (...args: unknown[]) => {
-    if (isDev) console.warn(...args);
-};
-const errorLog = (...args: unknown[]) => {
-    if (isDev) console.error(...args);
-};
+export const isNotionSyncEnabled = () => import.meta.env.VITE_NOTION_SYNC_ENABLED === 'true';
+const ENDPOINT = '/api/notion-sync';
+const active = new Map<string, { serialized: string; promise: Promise<NotionSyncResult> }>();
 
-function wait(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function shouldRetryStatus(status: number): boolean {
-    return status === 408 || status === 429 || status >= 500;
-}
-
-function toSafeErrorMessage(status?: number): string {
-    if (status === 401) {
-        return 'Notion sync is not authorized. Check the app configuration.';
-    }
-
-    if (status === 429) {
-        return 'Notion is rate limiting sync. Please retry shortly.';
-    }
-
-    if (status && status >= 500) {
-        return 'Notion sync is temporarily unavailable. Please retry later.';
-    }
-
-    if (status) {
-        return 'This entry could not be synced. Please retry.';
-    }
-
-    return 'Network error while syncing. Please retry.';
-}
-
-async function postNotionSync(payload: NotionSyncPayload, attempt: number): Promise<void> {
-    let res: Response;
-
-    try {
-        res = await fetch(NOTION_SYNC_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Idempotency-Key': payload.clientEntryId ?? '',
-                'X-API-Secret': import.meta.env.VITE_API_SECRET || '',
-            },
-            body: JSON.stringify(payload),
-        });
-    } catch (_) {
-        if (attempt < RETRY_DELAYS_MS.length) {
-            await wait(RETRY_DELAYS_MS[attempt]);
-            return postNotionSync(payload, attempt + 1);
-        }
-
-        throw new Error(toSafeErrorMessage());
-    }
-
-    if (res.ok) return;
-
-    await res.text().catch(() => '');
-
-    if (attempt < RETRY_DELAYS_MS.length && shouldRetryStatus(res.status)) {
-        await wait(RETRY_DELAYS_MS[attempt]);
-        return postNotionSync(payload, attempt + 1);
-    }
-
-    throw new Error(toSafeErrorMessage(res.status));
-}
-
-export async function saveToNotion(entry: Entry): Promise<NotionSyncResult> {
-    log('[Hazlo/Notion] saveToNotion initiated for entry:', entry.id);
-
-    const payload: NotionSyncPayload = {
+export function createSyncPayload(entry: Entry): SyncPayload {
+    return entry.syncPayload ?? {
         rawSpeech: entry.rawText,
         status: 'Not started',
         capturedAt: entry.createdAt,
         clientEntryId: entry.id,
-        tasks: entry.tasks.map(t => ({ text: t.text, completed: t.completed })),
+        tasks: entry.tasks.map(task => ({ text: task.text, completed: task.completed })),
     };
-
-    if (!payload.rawSpeech.trim()) {
-        warn('[Hazlo/Notion] Empty rawSpeech. Sync aborted.');
-        return { ok: false, error: 'Cannot sync an empty entry.' };
-    }
-
-    try {
-        await postNotionSync(payload, 0);
-        log(`[Hazlo/Notion] Sync success for ${entry.id}`);
-        return { ok: true };
-    } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errorLog(`[Hazlo/Notion] Sync failed for ${entry.id}: ${msg}`);
-        return { ok: false, error: msg || 'This entry could not be synced. Please retry.' };
-    }
 }
 
-export async function testNotionConnection(): Promise<boolean> {
-    try {
-        const res = await fetch(NOTION_SYNC_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-Secret': import.meta.env.VITE_API_SECRET || '',
-            },
-            body: JSON.stringify({
-                rawSpeech: '[Hazlo connectivity check]',
-                status: 'Not started',
-                capturedAt: new Date().toISOString(),
-                clientEntryId: 'connectivity-check',
-            } satisfies NotionSyncPayload),
-        });
-        return res.ok;
-    } catch (err) {
-        errorLog('[Hazlo/Notion] Connection test failed:', err);
-        return false;
+function safeError(status: number, code: string): NotionSyncResult {
+    if (code === 'sync_disabled') return { ok: false, disabled: true };
+    if (code === 'sync_outcome_unknown') return {
+        ok: false, uncertain: true,
+        error: 'The sync outcome is unknown. Check Notion before retrying; a retry may create a duplicate page.',
+    };
+    if (status === 429) return { ok: false, error: 'Sync is rate limited. Wait at least 60 seconds before retrying.' };
+    if (status === 409) return { ok: false, error: 'This entry ID was already used with different content. Check Notion before retrying.' };
+    if (status === 413 || (status === 400 && ['transcript_too_long', 'invalid_tasks'].includes(code))) {
+        return { ok: false, error: 'This entry exceeds sync limits (20,000 transcript characters, 80 tasks, 2,000 characters per task). Your full entry is kept locally.' };
     }
+    if (code === 'server_not_configured') return { ok: false, error: 'Notion sync needs server configuration. Your entry is saved locally.' };
+    return { ok: false, error: 'This entry could not be synced. Check configuration before retrying. Your entry is saved locally.' };
+}
+
+async function submit(payload: SyncPayload): Promise<NotionSyncResult> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+        const response = await fetch(ENDPOINT, {
+            method: 'POST', credentials: 'omit', redirect: 'error', cache: 'no-store', signal: controller.signal,
+            headers: { 'Content-Type': 'application/json', 'X-Idempotency-Key': payload.clientEntryId },
+            body: JSON.stringify(payload),
+        });
+        const body = await response.json().catch(() => null);
+        if (response.ok && body?.ok === true && typeof body.pageId === 'string') return { ok: true };
+        if (response.ok || response.status >= 500 && body?.error !== 'server_not_configured' && body?.error !== 'notion_sync_failed') {
+            return safeError(response.status, 'sync_outcome_unknown');
+        }
+        return safeError(response.status, typeof body?.error === 'string' ? body.error : '');
+    } catch {
+        return safeError(0, 'sync_outcome_unknown');
+    } finally { clearTimeout(timeout); }
+}
+
+export async function saveToNotion(entry: Entry): Promise<NotionSyncResult> {
+    if (!entry.rawText.trim()) return { ok: false, error: 'Cannot sync an empty entry.' };
+    if (!isNotionSyncEnabled()) return { ok: false, disabled: true };
+    const payload = createSyncPayload(entry);
+    if (payload.rawSpeech.length > 20000 || payload.tasks.length > 80 || payload.tasks.some(task => task.text.length > 2000)) {
+        return safeError(400, 'transcript_too_long');
+    }
+    const serialized = JSON.stringify(payload);
+    const existing = active.get(entry.id);
+    if (existing) return existing.serialized === serialized ? existing.promise : safeError(409, 'idempotency_conflict');
+    const promise = submit(payload);
+    active.set(entry.id, { serialized, promise });
+    try { return await promise; } finally { active.delete(entry.id); }
+}
+
+/** Checks app configuration only, not Notion connectivity. Never performs a write. */
+export async function checkNotionSyncConfiguration(): Promise<boolean> {
+    if (!isNotionSyncEnabled()) return false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+        const response = await fetch(ENDPOINT, { method: 'GET', cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal });
+        const body = await response.json();
+        return response.ok && body?.enabled === true && body?.configured === true;
+    } catch { return false; } finally { clearTimeout(timeout); }
 }

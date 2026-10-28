@@ -5,6 +5,7 @@
   "version": "1.0.0",
   "description": "Deterministic Canvas/Chromium motion film for Hazlo; isolated from the application.",
   "scripts": {
+    "test": "node --test scripts/server.check.mjs",
     "capture": "node scripts/capture.mjs",
     "audio": "node scripts/audio.mjs",
     "preview": "node scripts/render.mjs --preview",

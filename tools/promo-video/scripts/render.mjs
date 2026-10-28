@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import http from 'node:http';
+import { renderServer } from './server.mjs';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { root, dependency, chromeOptions } from './lib.mjs';
@@ -16,16 +16,7 @@ if(extracted.status!==0)throw new Error(extracted.stderr);
 const time = value => {const ms=Math.round(value*1000);return `${String(Math.floor(ms/3600000)).padStart(2,'0')}:${String(Math.floor(ms/60000)%60).padStart(2,'0')}:${String(Math.floor(ms/1000)%60).padStart(2,'0')},${String(ms%1000).padStart(3,'0')}`;};
 const srt=captions.map(([start,end,body],i)=>`${i+1}\n${time(start)} --> ${time(end)}\n${body}\n`).join('\n');
 await fs.writeFile(path.join(out,'hazlo-launch-captions.srt'),srt);
-const types={'.html':'text/html','.js':'text/javascript','.png':'image/png','.mp4':'video/mp4','.json':'application/json'};
-const server=http.createServer(async(req,res)=>{
-  try{
-    const rel=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\//,'')||'index.html';
-    const file=path.resolve(root,rel);
-    if(!file.startsWith(root+path.sep)&&file!==path.join(root,'index.html'))throw new Error('invalid path');
-    const body=await fs.readFile(file);
-    res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Content-Length':body.length});res.end(body);
-  }catch{res.writeHead(404);res.end('not found');}
-});
+const server=renderServer(root);
 server.listen(0,'127.0.0.1');await once(server,'listening');
 const browser=await chromium.launch(chromeOptions);
 try{
